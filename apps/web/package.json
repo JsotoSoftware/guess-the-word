@@ -1,0 +1,10 @@
+{
+  "name": "@guess-the-word/web",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo Web app bootstrap pending in Phase 1.2",
+    "build": "echo Web app build pending in Phase 1.2",
+    "typecheck": "echo Web app typecheck pending in Phase 1.2"
+  }
+}

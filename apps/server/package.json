@@ -1,0 +1,10 @@
+{
+  "name": "@guess-the-word/server",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo Server bootstrap pending in Phase 1.3",
+    "build": "echo Server build pending in Phase 1.3",
+    "typecheck": "echo Server typecheck pending in Phase 1.3"
+  }
+}

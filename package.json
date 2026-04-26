@@ -1,0 +1,19 @@
+{
+  "name": "guess-the-word",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Multiplayer word guessing game monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @guess-the-word/web",
+    "dev:server": "npm run dev --workspace @guess-the-word/server",
+    "build:web": "npm run build --workspace @guess-the-word/web",
+    "build:server": "npm run build --workspace @guess-the-word/server",
+    "typecheck:web": "npm run typecheck --workspace @guess-the-word/web",
+    "typecheck:server": "npm run typecheck --workspace @guess-the-word/server",
+    "typecheck:shared": "npm run typecheck --workspace @guess-the-word/shared"
+  }
+}
