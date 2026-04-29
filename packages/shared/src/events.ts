@@ -1,0 +1,18 @@
+export const SOCKET_EVENTS = {
+  roomCreate: 'room:create',
+  roomJoin: 'room:join',
+  sessionResume: 'session:resume',
+  roomUpdateSettings: 'room:update_settings',
+  roomStartMatch: 'room:start_match',
+  roundContinue: 'round:continue',
+  gameSubmitGuess: 'game:submit_guess',
+  chatSend: 'chat:send',
+  roomLeave: 'room:leave',
+  roomClose: 'room:close',
+  roomRematch: 'room:rematch',
+  roomState: 'room:state',
+  chatMessage: 'chat:message',
+  roomClosed: 'room:closed',
+  roomPresence: 'room:presence',
+  appNotification: 'app:notification',
+} as const

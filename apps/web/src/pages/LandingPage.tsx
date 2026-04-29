@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { SectionCard } from '../components/ui/SectionCard'
+import { roomSettingsPreview } from '../types/room-settings-preview'
 
 const createRoomFields = [
   'Apodo',
@@ -32,6 +33,14 @@ export function LandingPage() {
           </a>
         </div>
       </section>
+
+      <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-6 text-sm text-slate-300 shadow-glow">
+        <p className="font-medium text-white">Vista previa tipada desde el paquete compartido</p>
+        <p className="mt-2 text-slate-400">
+          Rondas: {roomSettingsPreview.totalRounds} · Intentos: {roomSettingsPreview.attemptsPerRound} · Envío:{' '}
+          {roomSettingsPreview.submissionMode === 'auto_send' ? 'autoenvío' : 'manual'}
+        </p>
+      </div>
 
       <div id="flows" className="grid gap-6 lg:grid-cols-2">
         <SectionCard title="Flujo para crear sala" description="Contenido provisional orientado al anfitrión para la pantalla de creación de sala.">
