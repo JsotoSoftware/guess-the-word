@@ -15,6 +15,7 @@
     "typecheck:web": "npm run typecheck --workspace @guess-the-word/web",
     "typecheck:server": "npm run typecheck --workspace @guess-the-word/server",
     "typecheck:shared": "npm run typecheck --workspace @guess-the-word/shared",
+    "test:server": "npm run test:unit --workspace @guess-the-word/server",
     "db:migrate": "npm run db:migrate --workspace @guess-the-word/server",
     "db:seed": "npm run db:seed --workspace @guess-the-word/server",
     "db:check": "npm run db:check --workspace @guess-the-word/server"
