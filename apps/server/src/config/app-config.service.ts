@@ -16,4 +16,14 @@ export class AppConfigService {
   get nodeEnv(): string {
     return this.configService.get<string>('NODE_ENV') ?? 'development'
   }
+
+  get databaseUrl(): string {
+    const databaseUrl = this.configService.get<string>('DATABASE_URL')
+
+    if (!databaseUrl) {
+      throw new Error('DATABASE_URL is not configured.')
+    }
+
+    return databaseUrl
+  }
 }

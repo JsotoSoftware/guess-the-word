@@ -1,0 +1,2 @@
+ALTER TABLE words
+  ALTER COLUMN language SET DEFAULT 'es';
