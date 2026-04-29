@@ -152,39 +152,43 @@ export function MockGamePage() {
               </span>
             </div>
 
-            <div className="space-y-3">
-              {guesses.map((row, rowIndex) => (
-                <div key={`${row.guess}-${rowIndex}`} className="flex flex-wrap gap-3">
-                  {row.letters.map((letter, index) => (
-                    <LetterBox key={`${row.guess}-${index}`} value={letter.letter} feedback={letter.feedback} disabled />
+            <div className="rounded-[28px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)]">
+              <div className="rounded-[22px] border-[4px] border-[#3048a8] bg-[#88b7ff] p-3 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)]">
+                <div className="space-y-2.5">
+                  {guesses.map((row, rowIndex) => (
+                    <div key={`${row.guess}-${rowIndex}`} className="flex flex-wrap gap-2.5">
+                      {row.letters.map((letter, index) => (
+                        <LetterBox key={`${row.guess}-${index}`} value={letter.letter} feedback={letter.feedback} disabled />
+                      ))}
+                    </div>
                   ))}
-                </div>
-              ))}
 
-              {status === 'playing' ? (
-                <div className="flex flex-wrap gap-3">
-                  {letters.map((letter, index) => (
-                    <LetterBox
-                      key={`active-${index}`}
-                      value={letter}
-                      autoFocus={index === 0 && guesses.length === 0}
-                      ref={(element) => {
-                        inputRefs.current[index] = element
-                      }}
-                      onChange={(value) => updateLetterAt(index, value)}
-                      onKeyDown={(event) => handleKeyDown(index, event)}
-                    />
-                  ))}
-                </div>
-              ) : null}
+                  {status === 'playing' ? (
+                    <div className="flex flex-wrap gap-2.5">
+                      {letters.map((letter, index) => (
+                        <LetterBox
+                          key={`active-${index}`}
+                          value={letter}
+                          autoFocus={index === 0 && guesses.length === 0}
+                          ref={(element) => {
+                            inputRefs.current[index] = element
+                          }}
+                          onChange={(value) => updateLetterAt(index, value)}
+                          onKeyDown={(event) => handleKeyDown(index, event)}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
 
-              {Array.from({ length: emptyRows }).map((_, rowIndex) => (
-                <div key={`empty-${rowIndex}`} className="flex flex-wrap gap-3 opacity-50">
-                  {Array.from({ length: wordLength }).map((__, index) => (
-                    <LetterBox key={`empty-${rowIndex}-${index}`} value="" disabled />
+                  {Array.from({ length: emptyRows }).map((_, rowIndex) => (
+                    <div key={`empty-${rowIndex}`} className="flex flex-wrap gap-2.5 opacity-80">
+                      {Array.from({ length: wordLength }).map((__, index) => (
+                        <LetterBox key={`empty-${rowIndex}-${index}`} value="" disabled />
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -223,6 +227,7 @@ export function MockGamePage() {
             </ul>
             <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-slate-400">
               <p className="font-medium text-slate-200">Cómo probar esta pantalla</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-brand-200">Estilo visual inspirado en tableros como CodyCross</p>
               <ol className="mt-2 list-decimal space-y-2 pl-5">
                 <li>Escribe una palabra de {wordLength} letras directamente en las casillas.</li>
                 <li>Presiona Enter o el botón de envío.</li>
