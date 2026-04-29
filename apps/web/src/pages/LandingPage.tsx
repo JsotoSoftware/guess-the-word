@@ -28,6 +28,9 @@ export function LandingPage() {
           <Link className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400" to="/room/ABCD12">
             Ver ruta de sala
           </Link>
+          <Link className="rounded-full border border-white/10 px-5 py-3 font-medium text-slate-200 transition hover:border-white/30 hover:text-white" to="/demo/tablero">
+            Probar tablero local
+          </Link>
           <a className="rounded-full border border-white/10 px-5 py-3 font-medium text-slate-200 transition hover:border-white/30 hover:text-white" href="#flows">
             Revisar flujos provisionales
           </a>

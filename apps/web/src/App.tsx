@@ -1,6 +1,7 @@
 import { Link, Route, Routes } from 'react-router-dom'
 import { LandingPage } from './pages/LandingPage'
 import { RoomPage } from './pages/RoomPage'
+import { MockGamePage } from './pages/MockGamePage'
 import { NotFoundPage } from './pages/NotFoundPage'
 import { env } from './lib/env'
 
@@ -20,6 +21,9 @@ export default function App() {
             <Link className="rounded-full border border-white/10 px-4 py-2 transition hover:border-brand-400 hover:text-white" to="/room/ABCD12">
               Vista de sala
             </Link>
+            <Link className="rounded-full border border-white/10 px-4 py-2 transition hover:border-brand-400 hover:text-white" to="/demo/tablero">
+              Tablero demo
+            </Link>
           </nav>
         </div>
       </header>
@@ -28,6 +32,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/room/:code" element={<RoomPage />} />
+          <Route path="/demo/tablero" element={<MockGamePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
