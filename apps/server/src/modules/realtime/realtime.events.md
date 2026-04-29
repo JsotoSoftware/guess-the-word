@@ -1,11 +1,16 @@
-# Realtime bootstrap events
+# Realtime events implemented so far
 
-Temporary Phase 1.3 websocket events:
-
+## Bootstrap
 - `server:ready`
-  - emitted by server on initial socket connection
 - `client:ping`
-  - client can send a ping payload
-- response: `{ message: 'pong', serverTime, receivedTimestamp }`
 
-These are bootstrap-only events to verify the Socket.IO/NestJS integration before the real room/game event contracts are implemented.
+## Phase 3.1 room flow
+- `room:create`
+- `room:join`
+- `room:state`
+
+Current scope:
+- room creation with host assignment
+- room join by code and nickname
+- lobby snapshot broadcast to connected room members
+- validation for missing room, closed room, full room, duplicated nickname, and invalid settings

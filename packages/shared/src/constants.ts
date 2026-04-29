@@ -1,6 +1,13 @@
-import type { RoomSettings } from './contracts'
+import type { GameMode, RoomSettings } from './contracts'
+
+export const ROOM_CODE_LENGTH = 6
 
 export const DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS = 60
+
+export const MIN_PLAYERS_BY_MODE: Record<GameMode, number> = {
+  pvp: 2,
+  coop: 1,
+}
 
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   mode: 'pvp',

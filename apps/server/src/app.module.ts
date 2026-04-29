@@ -4,6 +4,7 @@ import { AppConfigModule } from './config/app-config.module'
 import { DatabaseModule } from './db/database.module'
 import { HealthModule } from './modules/health/health.module'
 import { RealtimeModule } from './modules/realtime/realtime.module'
+import { RoomsModule } from './modules/rooms/rooms.module'
 import { WordsModule } from './modules/words/words.module'
 
 @Module({
@@ -15,6 +16,7 @@ import { WordsModule } from './modules/words/words.module'
     AppConfigModule,
     DatabaseModule,
     HealthModule,
+    RoomsModule,
     RealtimeModule,
     WordsModule,
   ],
