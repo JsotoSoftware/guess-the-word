@@ -7,7 +7,7 @@
     "build": "nest build",
     "start": "node dist/main.js",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.scripts.json",
-    "test:unit": "tsx --test src/modules/**/*.spec.ts",
+    "test:unit": "tsx --test src/modules/**/*.spec.ts src/modules/**/*.service.spec.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:seed": "tsx scripts/db-seed.ts",
     "db:check": "tsx scripts/db-check.ts"
