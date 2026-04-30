@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import { DEFAULT_ROOM_SETTINGS } from '@guess-the-word/shared'
 import {
   NotHostError,
-  RoomClosedError,
   RoomNotFoundError,
   RoomsService,
 } from './rooms.service'
@@ -84,12 +83,32 @@ test('rechaza unirse a una sala cerrada', () => {
     socketId: 'socket-host',
   })
 
-  service.closeRoom(createdRoom.room.roomCode)
+  service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
 
   assert.throws(
     () => service.joinRoom({ roomCode: createdRoom.room.roomCode, nickname: 'Luis', socketId: 'socket-guest' }),
-    RoomClosedError,
+    RoomNotFoundError,
   )
+})
+
+test('el host puede cerrar la sala y se elimina de la memoria activa', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  const response = service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
 })
 
 test('sincroniza cambios de configuración para todos los jugadores del lobby', () => {
@@ -199,6 +218,21 @@ test('en PVP el host no puede iniciar con menos de 2 jugadores', () => {
 
   assert.equal(createdRoom.room.minPlayersRequired, 2)
   assert.equal(createdRoom.room.canCurrentPlayerStartMatch, false)
+})
+
+test('la limpieza por inactividad cierra salas de lobby abandonadas', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  const closedRooms = service.closeIdleRooms(new Date('2030-01-01T00:10:00.000Z'))
+
+  assert.equal(closedRooms.length, 1)
+  assert.equal(closedRooms[0].roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
 })
 
 test('en cooperativo el host sí puede iniciar con un solo jugador', () => {

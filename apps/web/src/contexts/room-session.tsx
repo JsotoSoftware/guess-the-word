@@ -11,12 +11,15 @@ import {
 import {
   SOCKET_EVENTS,
   type Ack,
+  type CloseRoomRequest,
+  type CloseRoomResponse,
   type CreateRoomRequest,
   type CreateRoomResponse,
   type JoinRoomRequest,
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type RoomClosedEvent,
   type RoomSnapshot,
   type RoomStateEvent,
   type UpdateRoomSettingsRequest,
@@ -30,10 +33,13 @@ interface RoomSessionContextValue {
   room: RoomSnapshot | null
   currentPlayerId: string | null
   resumeToken: string | null
+  closedRoomCode: string | null
   createRoom: (payload: CreateRoomRequest) => Promise<CreateRoomResponse>
   joinRoom: (payload: JoinRoomRequest) => Promise<JoinRoomResponse>
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
   leaveRoom: (payload: LeaveRoomRequest) => Promise<LeaveRoomResponse>
+  closeRoom: (payload: CloseRoomRequest) => Promise<CloseRoomResponse>
+  clearClosedRoomCode: () => void
 }
 
 const RoomSessionContext = createContext<RoomSessionContextValue | undefined>(undefined)
@@ -48,6 +54,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null)
   const [resumeToken, setResumeToken] = useState<string | null>(null)
+  const [closedRoomCode, setClosedRoomCode] = useState<string | null>(null)
 
   useEffect(() => {
     const socket = io(env.socketUrl, {
@@ -62,11 +69,19 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     const handleRoomState = (event: RoomStateEvent) => {
       setRoom(event.room)
       setCurrentPlayerId(event.room.currentPlayerId)
+      setClosedRoomCode(null)
+    }
+    const handleRoomClosed = (event: RoomClosedEvent) => {
+      setRoom(null)
+      setCurrentPlayerId(null)
+      setResumeToken(null)
+      setClosedRoomCode(event.roomCode)
     }
 
     socket.on('connect', handleConnect)
     socket.on('disconnect', handleDisconnect)
     socket.on(SOCKET_EVENTS.roomState, handleRoomState)
+    socket.on(SOCKET_EVENTS.roomClosed, handleRoomClosed)
 
     setConnected(socket.connected)
 
@@ -74,6 +89,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       socket.off('connect', handleConnect)
       socket.off('disconnect', handleDisconnect)
       socket.off(SOCKET_EVENTS.roomState, handleRoomState)
+      socket.off(SOCKET_EVENTS.roomClosed, handleRoomClosed)
       socket.disconnect()
       socketRef.current = null
     }
@@ -115,6 +131,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setRoom(response.room)
       setCurrentPlayerId(response.playerId)
       setResumeToken(response.resumeToken)
+      setClosedRoomCode(null)
       return response
     } catch (error) {
       throw new Error(extractErrorMessage(error))
@@ -127,6 +144,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setRoom(response.room)
       setCurrentPlayerId(response.playerId)
       setResumeToken(response.resumeToken)
+      setClosedRoomCode(null)
       return response
     } catch (error) {
       throw new Error(extractErrorMessage(error))
@@ -155,16 +173,44 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const closeRoom = useCallback(async (payload: CloseRoomRequest) => {
+    try {
+      const response = await emitWithAck<CloseRoomResponse, CloseRoomRequest>(SOCKET_EVENTS.roomClose, payload)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
+  const clearClosedRoomCode = useCallback(() => {
+    setClosedRoomCode(null)
+  }, [])
+
   const value = useMemo<RoomSessionContextValue>(() => ({
     connected,
     room,
     currentPlayerId,
     resumeToken,
+    closedRoomCode,
     createRoom,
     joinRoom,
     updateRoomSettings,
     leaveRoom,
-  }), [connected, room, currentPlayerId, resumeToken, createRoom, joinRoom, updateRoomSettings, leaveRoom])
+    closeRoom,
+    clearClosedRoomCode,
+  }), [
+    connected,
+    room,
+    currentPlayerId,
+    resumeToken,
+    closedRoomCode,
+    createRoom,
+    joinRoom,
+    updateRoomSettings,
+    leaveRoom,
+    closeRoom,
+    clearClosedRoomCode,
+  ])
 
   return <RoomSessionContext.Provider value={value}>{children}</RoomSessionContext.Provider>
 }

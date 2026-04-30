@@ -7,17 +7,20 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets'
-import { Logger } from '@nestjs/common'
+import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import {
   SOCKET_EVENTS,
   type Ack,
   type AppError,
+  type CloseRoomRequest,
+  type CloseRoomResponse,
   type CreateRoomRequest,
   type CreateRoomResponse,
   type JoinRoomRequest,
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type RoomClosedEvent,
   type UpdateRoomSettingsRequest,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
@@ -35,22 +38,43 @@ interface PongPayload {
   receivedTimestamp: string | null
 }
 
+const ROOM_IDLE_CLEANUP_INTERVAL_MS = 30_000
+
 @WebSocketGateway({
   cors: {
     origin: true,
     credentials: true,
   },
 })
-export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect, OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RealtimeGateway.name)
 
   @WebSocketServer()
   server!: Server
 
+  private idleCleanupInterval: NodeJS.Timeout | null = null
+
   constructor(
     private readonly config: AppConfigService,
     private readonly roomsService: RoomsService,
   ) {}
+
+  onModuleInit(): void {
+    this.idleCleanupInterval = setInterval(() => {
+      const closedRooms = this.roomsService.closeIdleRooms()
+
+      for (const closedRoom of closedRooms) {
+        this.emitRoomClosed(closedRoom)
+      }
+    }, ROOM_IDLE_CLEANUP_INTERVAL_MS)
+  }
+
+  onModuleDestroy(): void {
+    if (this.idleCleanupInterval) {
+      clearInterval(this.idleCleanupInterval)
+      this.idleCleanupInterval = null
+    }
+  }
 
   handleConnection(client: Socket): void {
     this.logger.log(`Socket connected: ${client.id} (clientUrl: ${this.config.clientUrl})`)
@@ -158,6 +182,29 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  @SubscribeMessage(SOCKET_EVENTS.roomClose)
+  handleCloseRoom(
+    @MessageBody() payload: CloseRoomRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<CloseRoomResponse> {
+    try {
+      const response = this.roomsService.closeRoom({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+      })
+
+      this.emitRoomClosed(response)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`room:close failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
   @SubscribeMessage(SOCKET_EVENTS.roomLeave)
   handleLeaveRoom(
     @MessageBody() payload: LeaveRoomRequest,
@@ -183,6 +230,10 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       this.logger.warn(`room:leave failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
+  }
+
+  private emitRoomClosed(event: RoomClosedEvent): void {
+    this.server.to(event.roomCode).emit(SOCKET_EVENTS.roomClosed, event)
   }
 
   private emitRoomState(roomCode: string): void {

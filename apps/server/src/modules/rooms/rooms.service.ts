@@ -3,6 +3,7 @@ import {
   DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
   MIN_PLAYERS_BY_MODE,
   ROOM_CODE_LENGTH,
+  type CloseRoomResponse,
   type CreateRoomResponse,
   type GameMode,
   type JoinRoomResponse,
@@ -10,6 +11,7 @@ import {
   type LobbyRoomSnapshot,
   type PlayerConnectionState,
   type PlayerSummary,
+  type RoomClosedEvent,
   type RoomSettings,
   type RoomStatus,
   type UpdateRoomSettingsResponse,
@@ -18,6 +20,7 @@ import { randomBytes, randomUUID } from 'node:crypto'
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_ROOM_CODE_ATTEMPTS = 100
+const ROOM_IDLE_TIMEOUT_MS = 6 * 60 * 1000
 
 class RoomActionError extends Error {
   constructor(
@@ -101,6 +104,7 @@ interface LiveRoom {
   hostPlayerId: string
   players: LivePlayer[]
   createdAt: string
+  lastActivityAt: string
 }
 
 interface CreateRoomInput {
@@ -119,6 +123,11 @@ interface UpdateRoomSettingsInput {
   roomCode: string
   socketId: string
   settings: RoomSettings
+}
+
+interface CloseRoomInput {
+  roomCode: string
+  socketId: string
 }
 
 interface LeaveRoomInput {
@@ -166,6 +175,7 @@ export class RoomsService {
       hostPlayerId,
       players: [hostPlayer],
       createdAt,
+      lastActivityAt: createdAt,
     }
 
     this.rooms.set(roomCode, room)
@@ -204,6 +214,7 @@ export class RoomsService {
     })
 
     room.players.push(player)
+    this.touchRoom(room)
 
     return {
       playerId: player.playerId,
@@ -223,10 +234,54 @@ export class RoomsService {
     }
 
     room.settings = this.normalizeSettings(input.settings)
+    this.touchRoom(room)
 
     return {
       room: this.buildLobbySnapshot(room, player.playerId),
     }
+  }
+
+  closeRoom(input: CloseRoomInput): CloseRoomResponse {
+    const room = this.getRoomOrThrow(input.roomCode)
+    const player = this.getPlayerBySocketId(room, input.socketId)
+
+    if (player.playerId !== room.hostPlayerId) {
+      throw new NotHostError()
+    }
+
+    room.status = 'closed'
+    this.rooms.delete(room.roomCode)
+
+    return {
+      roomCode: room.roomCode,
+      closedAt: new Date().toISOString(),
+    }
+  }
+
+  closeIdleRooms(now = new Date()): RoomClosedEvent[] {
+    const closedRooms: RoomClosedEvent[] = []
+
+    for (const room of this.rooms.values()) {
+      if (room.status !== 'lobby') {
+        continue
+      }
+
+      const idleTimeMs = now.getTime() - new Date(room.lastActivityAt).getTime()
+
+      if (idleTimeMs < ROOM_IDLE_TIMEOUT_MS) {
+        continue
+      }
+
+      room.status = 'closed'
+      const closedAt = now.toISOString()
+      this.rooms.delete(room.roomCode)
+      closedRooms.push({
+        roomCode: room.roomCode,
+        closedAt,
+      })
+    }
+
+    return closedRooms
   }
 
   leaveRoom(input: LeaveRoomInput): LeaveRoomResult {
@@ -252,11 +307,6 @@ export class RoomsService {
     return this.removePlayerFromRoom(room, socketId)
   }
 
-  closeRoom(roomCode: string): void {
-    const room = this.getRoomOrThrow(roomCode)
-    room.status = 'closed'
-  }
-
   hasRoom(roomCode: string): boolean {
     return this.rooms.has(roomCode.trim().toUpperCase())
   }
@@ -268,6 +318,10 @@ export class RoomsService {
       socketId: player.socketId,
       room: this.buildLobbySnapshot(room, player.playerId),
     }))
+  }
+
+  private touchRoom(room: LiveRoom): void {
+    room.lastActivityAt = new Date().toISOString()
   }
 
   private findRoomBySocketId(socketId: string): LiveRoom | null {
@@ -316,6 +370,8 @@ export class RoomsService {
         isHost: index === 0,
       }))
     }
+
+    this.touchRoom(room)
 
     return {
       roomCode: room.roomCode,

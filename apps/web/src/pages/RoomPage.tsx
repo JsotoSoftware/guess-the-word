@@ -77,12 +77,22 @@ function getStartMessage(room: LobbyRoomSnapshot, isHost: boolean): string {
 export function RoomPage() {
   const navigate = useNavigate()
   const { code = '' } = useParams()
-  const { room, connected, currentPlayerId, updateRoomSettings, leaveRoom } = useRoomSession()
+  const {
+    room,
+    connected,
+    currentPlayerId,
+    closedRoomCode,
+    updateRoomSettings,
+    leaveRoom,
+    closeRoom,
+    clearClosedRoomCode,
+  } = useRoomSession()
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null)
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isLeavingRoom, setIsLeavingRoom] = useState(false)
+  const [isClosingRoom, setIsClosingRoom] = useState(false)
 
   const currentRoom = useMemo(() => {
     if (!room || room.roomCode !== code.toUpperCase() || room.viewState !== 'lobby') {
@@ -101,6 +111,13 @@ export function RoomPage() {
       setSettingsForm(toSettingsFormState(currentRoom.settings))
     }
   }, [currentRoom])
+
+  useEffect(() => {
+    if (closedRoomCode === code.toUpperCase()) {
+      clearClosedRoomCode()
+      navigate('/', { replace: true })
+    }
+  }, [clearClosedRoomCode, closedRoomCode, code, navigate])
 
   const currentPlayer = currentRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const isHost = currentPlayer?.isHost ?? false
@@ -183,6 +200,23 @@ export function RoomPage() {
     }
   }
 
+  const handleCloseRoom = async () => {
+    if (!currentRoom) {
+      return
+    }
+
+    setActionMessage(null)
+    setSettingsError(null)
+    setIsClosingRoom(true)
+
+    try {
+      await closeRoom({ roomCode: currentRoom.roomCode })
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sala.')
+      setIsClosingRoom(false)
+    }
+  }
+
   const handleStartPreview = () => {
     if (!currentRoom) {
       return
@@ -220,7 +254,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 3.2</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 3.3</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {currentRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentPlayer ? `Conectado como ${currentPlayer.nickname}${currentPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
@@ -234,6 +268,16 @@ export function RoomPage() {
           >
             Copiar código
           </button>
+          {isHost ? (
+            <button
+              type="button"
+              onClick={handleCloseRoom}
+              disabled={isClosingRoom}
+              className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isClosingRoom ? 'Cerrando sala...' : 'Cerrar sala'}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={handleLeaveRoom}
@@ -292,6 +336,7 @@ export function RoomPage() {
               {currentRoom.canCurrentPlayerStartMatch ? 'Inicio disponible' : 'Revisar restricción de inicio'}
             </button>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">La activación real de la ronda llega en las fases 4 y 5.</p>
+            <p className="text-xs text-slate-500">Las salas del lobby se cerrarán automáticamente tras 5 minutos sin actividad.</p>
           </div>
         </SectionCard>
       </div>
