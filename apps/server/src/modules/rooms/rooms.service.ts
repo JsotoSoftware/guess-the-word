@@ -31,6 +31,7 @@ import {
   PlayerAlreadyFinishedError,
   RoundAlreadyCompletedError,
   RoundStateService,
+  type CoopRoundState as EngineCoopRoundState,
   type PvpRoundState as EnginePvpRoundState,
 } from '../game/round-state.service'
 import { InvalidGuessLengthError } from '../game/guess-evaluator'
@@ -160,6 +161,7 @@ interface LiveRoom {
   lastActivityAt: string
   currentRoundNumber: number
   activePvpRound: LivePvpRound | null
+  activeCoopRound: EngineCoopRoundState | null
 }
 
 interface CreateRoomInput {
@@ -255,6 +257,7 @@ export class RoomsService {
       lastActivityAt: createdAt,
       currentRoundNumber: 0,
       activePvpRound: null,
+      activeCoopRound: null,
     }
 
     this.rooms.set(roomCode, room)
@@ -346,40 +349,47 @@ export class RoomsService {
       })
     }
 
-    if (room.settings.mode !== 'pvp') {
-      throw new StartNotAllowedError('El arranque cooperativo se implementará en la fase 5.', {
-        mode: room.settings.mode,
-      })
-    }
-
     if (!this.wordsService) {
       throw new Error('WordsService is not available.')
     }
 
     const secretWord = await this.wordsService.getRandomSecretWord({})
     const startedAt = new Date().toISOString()
-    const roundState = this.roundStateService.createPvpRoundState(
-      secretWord.word,
-      room.players.map((roomPlayer) => ({
-        playerId: roomPlayer.playerId,
-        nickname: roomPlayer.nickname,
-      })),
-      room.settings.attemptsPerRound,
-      startedAt,
-    )
-
-    const timerDurationSeconds = room.settings.pvpTimerSeconds
-    const timerEndsAt = timerDurationSeconds === null
-      ? null
-      : new Date(Date.parse(startedAt) + timerDurationSeconds * 1000).toISOString()
 
     room.status = 'in_game'
     room.currentRoundNumber = 1
-    room.activePvpRound = {
-      state: roundState,
-      timerDurationSeconds,
-      timerEndsAt,
+
+    if (room.settings.mode === 'pvp') {
+      const roundState = this.roundStateService.createPvpRoundState(
+        secretWord.word,
+        room.players.map((roomPlayer) => ({
+          playerId: roomPlayer.playerId,
+          nickname: roomPlayer.nickname,
+        })),
+        room.settings.attemptsPerRound,
+        startedAt,
+      )
+
+      const timerDurationSeconds = room.settings.pvpTimerSeconds
+      const timerEndsAt = timerDurationSeconds === null
+        ? null
+        : new Date(Date.parse(startedAt) + timerDurationSeconds * 1000).toISOString()
+
+      room.activePvpRound = {
+        state: roundState,
+        timerDurationSeconds,
+        timerEndsAt,
+      }
+      room.activeCoopRound = null
+    } else {
+      room.activePvpRound = null
+      room.activeCoopRound = this.roundStateService.createCoopRoundState(
+        secretWord.word,
+        room.settings.attemptsPerRound,
+        startedAt,
+      )
     }
+
     this.touchRoom(room)
 
     return {
@@ -390,18 +400,43 @@ export class RoomsService {
   submitGuess(input: SubmitGuessInput): SubmitGuessResponse {
     const room = this.getRoomOrThrow(input.roomCode)
 
-    if (room.status !== 'in_game' || !room.activePvpRound) {
-      throw new RoundNotActiveError()
-    }
-
-    this.expirePvpTimerIfNeeded(room)
-
-    if (room.activePvpRound.state.status !== 'active') {
+    if (room.status !== 'in_game' || (!room.activePvpRound && !room.activeCoopRound)) {
       throw new RoundNotActiveError()
     }
 
     const player = this.getPlayerBySocketId(room, input.socketId)
     const normalizedGuess = input.guess.trim().toLowerCase()
+
+    if (room.activeCoopRound) {
+      try {
+        room.activeCoopRound = this.roundStateService.applyCoopGuess(
+          room.activeCoopRound,
+          normalizedGuess,
+          player.playerId,
+        )
+        this.touchRoom(room)
+
+        return {
+          accepted: true,
+        }
+      } catch (error) {
+        if (error instanceof InvalidGuessLengthError) {
+          throw new InvalidGuessLengthAppError(room.activeCoopRound.wordLength, normalizedGuess.length)
+        }
+
+        if (error instanceof RoundAlreadyCompletedError) {
+          throw new RoundNotActiveError()
+        }
+
+        throw error
+      }
+    }
+
+    this.expirePvpTimerIfNeeded(room)
+
+    if (!room.activePvpRound || room.activePvpRound.state.status !== 'active') {
+      throw new RoundNotActiveError()
+    }
 
     if (
       room.activePvpRound.state.players
@@ -669,36 +704,63 @@ export class RoomsService {
   private buildActiveRoundSnapshot(room: LiveRoom, currentPlayerId: string): ActiveRoundRoomSnapshot {
     const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
 
-    if (!room.activePvpRound) {
-      throw new Error(`The room ${room.roomCode} does not have an active PVP round.`)
+    if (room.activePvpRound) {
+      const scoreboard = this.buildScoreboard(room)
+      const timer = this.buildTimerState(room.activePvpRound)
+
+      return {
+        roomCode: room.roomCode,
+        status: 'in_game',
+        viewState: 'round_active',
+        settings: room.settings,
+        hostPlayerId: room.hostPlayerId,
+        players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+        currentPlayerId,
+        minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+        canCurrentPlayerStartMatch: false,
+        createdAt: room.createdAt,
+        currentRoundNumber: room.currentRoundNumber,
+        totalRounds: room.settings.totalRounds,
+        round: {
+          mode: 'pvp',
+          wordLength: room.activePvpRound.state.wordLength,
+          submissionMode: room.settings.submissionMode,
+          timer,
+          scoreboard,
+          players: room.activePvpRound.state.players.map((player) => ({ ...player })),
+        },
+        chatMessages: [],
+      }
     }
 
-    const scoreboard = this.buildScoreboard(room)
-    const timer = this.buildTimerState(room.activePvpRound)
-
-    return {
-      roomCode: room.roomCode,
-      status: 'in_game',
-      viewState: 'round_active',
-      settings: room.settings,
-      hostPlayerId: room.hostPlayerId,
-      players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
-      currentPlayerId,
-      minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
-      canCurrentPlayerStartMatch: false,
-      createdAt: room.createdAt,
-      currentRoundNumber: room.currentRoundNumber,
-      totalRounds: room.settings.totalRounds,
-      round: {
-        mode: 'pvp',
-        wordLength: room.activePvpRound.state.wordLength,
-        submissionMode: room.settings.submissionMode,
-        timer,
-        scoreboard,
-        players: room.activePvpRound.state.players.map((player) => ({ ...player })),
-      },
-      chatMessages: [],
+    if (room.activeCoopRound) {
+      return {
+        roomCode: room.roomCode,
+        status: 'in_game',
+        viewState: 'round_active',
+        settings: room.settings,
+        hostPlayerId: room.hostPlayerId,
+        players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+        currentPlayerId,
+        minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+        canCurrentPlayerStartMatch: false,
+        createdAt: room.createdAt,
+        currentRoundNumber: room.currentRoundNumber,
+        totalRounds: room.settings.totalRounds,
+        round: {
+          mode: 'coop',
+          wordLength: room.activeCoopRound.wordLength,
+          submissionMode: room.settings.submissionMode,
+          status: room.activeCoopRound.status,
+          attemptsLeft: room.activeCoopRound.attemptsLeft,
+          totalAttempts: room.activeCoopRound.totalAttempts,
+          guessHistory: room.activeCoopRound.guessHistory.map((guessRecord) => ({ ...guessRecord })),
+        },
+        chatMessages: [],
+      }
     }
+
+    throw new Error(`The room ${room.roomCode} does not have an active round.`)
   }
 
   private buildRoundSummarySnapshot(room: LiveRoom, currentPlayerId: string): RoundSummaryRoomSnapshot {

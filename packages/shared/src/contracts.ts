@@ -113,6 +113,7 @@ export interface CoopActiveRoundState {
   mode: 'coop'
   wordLength: number
   submissionMode: GuessSubmissionMode
+  status: 'active' | RoundOutcome
   attemptsLeft: number
   totalAttempts: number
   guessHistory: GuessRecord[]

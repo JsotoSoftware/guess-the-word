@@ -76,7 +76,7 @@ function getStartMessage(room: LobbyRoomSnapshot, isHost: boolean): string {
   }
 
   if (room.settings.mode === 'coop') {
-    return 'El inicio cooperativo se implementará en la fase 5.'
+    return 'La sala ya cumple las restricciones para iniciar la partida cooperativa.'
   }
 
   return 'La sala ya cumple las restricciones para iniciar la partida PVP.'
@@ -105,11 +105,11 @@ function sanitizeLetter(value: string): string {
 
 function buildBoardMessage(hasAutoSend: boolean, canSubmit: boolean, isSolved: boolean, outOfAttempts: boolean): string {
   if (isSolved) {
-    return 'Ya resolviste la palabra de esta ronda.'
+    return 'La palabra de esta ronda ya fue resuelta.'
   }
 
   if (outOfAttempts) {
-    return 'Te quedaste sin intentos para esta ronda.'
+    return 'Se agotaron los intentos de esta ronda.'
   }
 
   if (!canSubmit) {
@@ -192,24 +192,26 @@ export function RoomPage() {
   const isHost = currentRoomPlayer?.isHost ?? false
 
   const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
+  const coopRound = activeRoom?.round.mode === 'coop' ? activeRoom.round : null
   const activeRoundPlayer = pvpRound?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const activeWordLength = pvpRound?.wordLength ?? coopRound?.wordLength ?? 0
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
-  const [letters, setLetters] = useState<string[]>(() => createEmptyLetters(pvpRound?.wordLength ?? 0))
+  const [letters, setLetters] = useState<string[]>(() => createEmptyLetters(activeWordLength))
 
   useEffect(() => {
-    if (!pvpRound) {
+    if (!activeWordLength) {
       setLetters([])
       return
     }
 
     setLetters((currentLetters) => {
-      if (currentLetters.length === pvpRound.wordLength) {
+      if (currentLetters.length === activeWordLength) {
         return currentLetters
       }
 
-      return createEmptyLetters(pvpRound.wordLength)
+      return createEmptyLetters(activeWordLength)
     })
-  }, [pvpRound])
+  }, [activeWordLength])
 
   useEffect(() => {
     if ((!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) && !summaryRoom) {
@@ -224,14 +226,29 @@ export function RoomPage() {
   }, [pvpRound, summaryRoom])
 
   useEffect(() => {
-    if (!pvpRound || !activeRoundPlayer) {
+    if (pvpRound && activeRoundPlayer) {
+      setLetters(createEmptyLetters(pvpRound.wordLength))
+      setIsSubmittingGuess(false)
+      requestAnimationFrame(() => inputRefs.current[0]?.focus())
       return
     }
 
-    setLetters(createEmptyLetters(pvpRound.wordLength))
-    setIsSubmittingGuess(false)
-    requestAnimationFrame(() => inputRefs.current[0]?.focus())
-  }, [activeRoundPlayer?.guessHistory.length, activeRoundPlayer?.attemptsLeft, activeRoundPlayer?.solved, activeRoundPlayer?.outOfAttempts, pvpRound])
+    if (coopRound) {
+      setLetters(createEmptyLetters(coopRound.wordLength))
+      setIsSubmittingGuess(false)
+      requestAnimationFrame(() => inputRefs.current[0]?.focus())
+    }
+  }, [
+    activeRoundPlayer?.guessHistory.length,
+    activeRoundPlayer?.attemptsLeft,
+    activeRoundPlayer?.solved,
+    activeRoundPlayer?.outOfAttempts,
+    coopRound?.guessHistory.length,
+    coopRound?.attemptsLeft,
+    coopRound?.status,
+    pvpRound,
+    coopRound,
+  ])
 
   const activeTimerLabel = useMemo(() => {
     if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
@@ -246,10 +263,17 @@ export function RoomPage() {
     return formatRemainingSeconds(remainingSeconds)
   }, [clockNow, pvpRound])
 
-  const canSubmitGuess = Boolean(pvpRound && activeRoundPlayer && !activeRoundPlayer.solved && !activeRoundPlayer.outOfAttempts)
-  const isAutoSend = pvpRound?.submissionMode === 'auto_send'
+  const canSubmitGuess = pvpRound
+    ? Boolean(activeRoundPlayer && !activeRoundPlayer.solved && !activeRoundPlayer.outOfAttempts)
+    : Boolean(coopRound && coopRound.status === 'active')
+  const isAutoSend = (pvpRound?.submissionMode ?? coopRound?.submissionMode) === 'auto_send'
   const isRowComplete = letters.length > 0 && letters.every((letter) => letter.length === 1)
-  const boardMessage = buildBoardMessage(Boolean(isAutoSend), canSubmitGuess, Boolean(activeRoundPlayer?.solved), Boolean(activeRoundPlayer?.outOfAttempts))
+  const boardMessage = buildBoardMessage(
+    Boolean(isAutoSend),
+    canSubmitGuess,
+    pvpRound ? Boolean(activeRoundPlayer?.solved) : coopRound?.status === 'won',
+    pvpRound ? Boolean(activeRoundPlayer?.outOfAttempts) : coopRound?.status === 'lost',
+  )
 
   useEffect(() => {
     if (!isAutoSend || !isRowComplete || !canSubmitGuess || isSubmittingGuess || !activeRoom) {
@@ -260,7 +284,7 @@ export function RoomPage() {
   }, [activeRoom, canSubmitGuess, isAutoSend, isRowComplete, isSubmittingGuess])
 
   const handleCopyRoomCode = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
 
     if (!roomCode) {
       return
@@ -326,11 +350,6 @@ export function RoomPage() {
       return
     }
 
-    if (lobbyRoom.settings.mode !== 'pvp') {
-      setActionMessage('El inicio cooperativo llegará en la fase 5.')
-      return
-    }
-
     setActionMessage(null)
     setSettingsError(null)
     setIsStartingMatch(true)
@@ -368,7 +387,7 @@ export function RoomPage() {
   }
 
   const handleLeaveRoom = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
 
     if (!roomCode) {
       return
@@ -388,7 +407,7 @@ export function RoomPage() {
   }
 
   const handleCloseRoom = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
 
     if (!roomCode) {
       return
@@ -413,7 +432,7 @@ export function RoomPage() {
   }
 
   const updateLetterAt = (index: number, rawValue: string) => {
-    if (!canSubmitGuess || !pvpRound) {
+    if (!canSubmitGuess || !activeWordLength) {
       return
     }
 
@@ -425,13 +444,13 @@ export function RoomPage() {
       return nextLetters
     })
 
-    if (nextLetter && index < pvpRound.wordLength - 1) {
+    if (nextLetter && index < activeWordLength - 1) {
       requestAnimationFrame(() => focusInput(index + 1))
     }
   }
 
   const handleBoardKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
-    if (!pvpRound) {
+    if (!activeWordLength) {
       return
     }
 
@@ -446,7 +465,7 @@ export function RoomPage() {
       return
     }
 
-    if (event.key === 'ArrowRight' && index < pvpRound.wordLength - 1) {
+    if (event.key === 'ArrowRight' && index < activeWordLength - 1) {
       event.preventDefault()
       focusInput(index + 1)
       return
@@ -609,6 +628,146 @@ export function RoomPage() {
     )
   }
 
+  if (activeRoom && coopRound) {
+    return (
+      <div className="space-y-8">
+        <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.1</p>
+            <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
+            <p className="mt-3 max-w-2xl text-slate-300">
+              Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleCopyRoomCode}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-brand-400 hover:text-white"
+            >
+              Copiar código
+            </button>
+            {isHost ? (
+              <button
+                type="button"
+                onClick={handleCloseRoom}
+                disabled={isClosingRoom}
+                className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isClosingRoom ? 'Cerrando sala...' : 'Cerrar sala'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              disabled={isLeavingRoom}
+              className="rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-100 transition hover:border-rose-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLeavingRoom ? 'Saliendo...' : 'Salir de la sala'}
+            </button>
+            <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+              {connected ? 'Conectado' : 'Reconectando'}
+            </span>
+          </div>
+        </section>
+
+        {copyFeedback ? <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{copyFeedback}</div> : null}
+        {actionMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{actionMessage}</div> : null}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.85fr)]">
+          <SectionCard title="Tablero compartido" description="Un único historial y un único contador de intentos para todo el equipo.">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Letras: {coopRound.wordLength}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Intentos compartidos: {coopRound.attemptsLeft}/{coopRound.totalAttempts}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Envío: {formatSubmissionMode(coopRound.submissionMode)}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Estado: {coopRound.status}</span>
+              </div>
+
+              <div className="rounded-[28px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)]">
+                <div className="rounded-[22px] border-[4px] border-[#3048a8] bg-[#88b7ff] p-3 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)]">
+                  <div className="space-y-2.5">
+                    {coopRound.guessHistory.map((guessRecord) => {
+                      const sender = activeRoom.players.find((player) => player.playerId === guessRecord.submittedByPlayerId)
+
+                      return (
+                        <div key={`${guessRecord.guess}-${guessRecord.submittedAt}`} className="space-y-1">
+                          <p className="text-xs uppercase tracking-[0.18em] text-slate-800/70">
+                            {sender?.nickname ?? 'Jugador'} · guess compartido
+                          </p>
+                          {renderGuessRow(guessRecord.guess, guessRecord.result)}
+                        </div>
+                      )
+                    })}
+
+                    {canSubmitGuess ? (
+                      <div className="flex flex-wrap gap-2.5">
+                        {letters.map((letter, index) => (
+                          <LetterBox
+                            key={`coop-active-${index}`}
+                            value={letter}
+                            autoFocus={index === 0 && coopRound.guessHistory.length === 0}
+                            ref={(element) => {
+                              inputRefs.current[index] = element
+                            }}
+                            onChange={(value) => updateLetterAt(index, value)}
+                            onKeyDown={(event) => handleBoardKeyDown(index, event)}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {Array.from({
+                      length: Math.max(coopRound.totalAttempts - coopRound.guessHistory.length - (canSubmitGuess ? 1 : 0), 0),
+                    }).map((_, rowIndex) => (
+                      <div key={`coop-empty-${rowIndex}`} className="flex flex-wrap gap-2.5 opacity-80">
+                        {Array.from({ length: coopRound.wordLength }).map((__, index) => (
+                          <LetterBox key={`coop-empty-${rowIndex}-${index}`} value="" disabled />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitGuess(false)}
+                  disabled={!canSubmitGuess || isAutoSend || !isRowComplete || isSubmittingGuess}
+                  className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                  {isSubmittingGuess ? 'Enviando...' : 'Enviar guess'}
+                </button>
+              </div>
+
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
+                {boardMessage}
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Equipo" description="Todos ven el mismo progreso cooperativo en tiempo real.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {activeRoom.players.map((player) => (
+                <div key={player.playerId} className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="font-medium text-white">{player.nickname}</p>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {player.isHost ? <span className="rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-brand-200">Host</span> : null}
+                      {player.playerId === currentPlayerId ? <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-emerald-200">Tú</span> : null}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-slate-500">Estado de conexión: {player.connectionState}</p>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+    )
+  }
+
   if (summaryRoom && summaryRoom.summary.mode === 'pvp') {
     const summaryCountdownSeconds = Math.max(
       Math.ceil((new Date(summaryRoom.summaryAutoAdvanceAt).getTime() - clockNow) / 1000),
@@ -712,7 +871,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.4</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.1</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
@@ -771,7 +930,7 @@ export function RoomPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Estado de inicio" description="El anfitrión ya puede arrancar una ronda PVP sincronizada desde este lobby.">
+        <SectionCard title="Estado de inicio" description="El anfitrión ya puede arrancar la partida sincronizada desde este lobby según el modo elegido.">
           <div className="space-y-4 text-sm text-slate-300">
             <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
               <p>
@@ -791,7 +950,7 @@ export function RoomPage() {
               disabled={!isHost || isStartingMatch || !lobbyRoom.canCurrentPlayerStartMatch}
               className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
-              {isStartingMatch ? 'Iniciando ronda...' : 'Iniciar ronda PVP'}
+              {isStartingMatch ? 'Iniciando partida...' : lobbyRoom.settings.mode === 'coop' ? 'Iniciar partida cooperativa' : 'Iniciar ronda PVP'}
             </button>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Las salas del lobby se cerrarán automáticamente tras 5 minutos sin actividad.</p>
           </div>
