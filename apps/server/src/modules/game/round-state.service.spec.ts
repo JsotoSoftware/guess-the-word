@@ -55,6 +55,29 @@ test('marca solución y posición cuando un jugador acierta en PVP', () => {
   assert.equal(afterFirstSolve.status, 'active')
 })
 
+test('asigna placements PVP en orden de resolución y no cambia los ya asignados', () => {
+  const round = service.createPvpRoundState(
+    'queso',
+    [
+      { playerId: 'p1', nickname: 'Ana' },
+      { playerId: 'p2', nickname: 'Luis' },
+      { playerId: 'p3', nickname: 'Marta' },
+      { playerId: 'p4', nickname: 'Pablo' },
+    ],
+    3,
+  )
+
+  const afterFirstSolve = service.applyPvpGuess(round, 'p2', 'queso', '2026-01-01T00:02:00.000Z')
+  const afterSecondSolve = service.applyPvpGuess(afterFirstSolve, 'p4', 'queso', '2026-01-01T00:02:10.000Z')
+  const afterThirdSolve = service.applyPvpGuess(afterSecondSolve, 'p1', 'queso', '2026-01-01T00:02:20.000Z')
+  const afterFourthSolve = service.applyPvpGuess(afterThirdSolve, 'p3', 'queso', '2026-01-01T00:02:30.000Z')
+
+  assert.equal(afterFourthSolve.players.find((player) => player.playerId === 'p2')?.finishPlacement, 1)
+  assert.equal(afterFourthSolve.players.find((player) => player.playerId === 'p4')?.finishPlacement, 2)
+  assert.equal(afterFourthSolve.players.find((player) => player.playerId === 'p1')?.finishPlacement, 3)
+  assert.equal(afterFourthSolve.players.find((player) => player.playerId === 'p3')?.finishPlacement, 4)
+})
+
 test('cierra la ronda PVP cuando todos los jugadores terminaron', () => {
   const round = service.createPvpRoundState(
     'queso',

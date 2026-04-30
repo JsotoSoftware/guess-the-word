@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { DEFAULT_ROOM_SETTINGS } from '@guess-the-word/shared'
+import { DEFAULT_ROOM_SETTINGS, PVP_BASE_POINTS, PVP_PLACEMENT_BONUSES } from '@guess-the-word/shared'
 import {
   GuessAlreadySubmittedError,
   InvalidGuessLengthAppError,
@@ -530,6 +530,142 @@ test('rechaza guesses duplicados del mismo jugador sin consumir intentos adicion
   assert.ok(hostPlayer)
   assert.equal(hostPlayer.attemptsLeft, 2)
   assert.equal(hostPlayer.guessHistory.length, 1)
+})
+
+test('actualiza el scoreboard PVP con puntos base, bonos por posición y placements estables', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      attemptsPerRound: 4,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest-1',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Marta',
+    socketId: 'socket-guest-2',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Pablo',
+    socketId: 'socket-guest-3',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    guess: 'queso',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest-1',
+    guess: 'queso',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest-2',
+    guess: 'queso',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest-3',
+    guess: 'queso',
+  })
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'pvp') {
+    throw new Error('Expected an active PVP round snapshot.')
+  }
+
+  const scoresByNickname = new Map(snapshot.round.scoreboard.map((entry) => [entry.nickname, entry]))
+
+  assert.equal(scoresByNickname.get('Ana')?.totalPoints, PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[1])
+  assert.equal(scoresByNickname.get('Luis')?.totalPoints, PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[2])
+  assert.equal(scoresByNickname.get('Marta')?.totalPoints, PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[3])
+  assert.equal(scoresByNickname.get('Pablo')?.totalPoints, PVP_BASE_POINTS)
+
+  assert.equal(scoresByNickname.get('Ana')?.currentPlacement, 1)
+  assert.equal(scoresByNickname.get('Luis')?.currentPlacement, 2)
+  assert.equal(scoresByNickname.get('Marta')?.currentPlacement, 3)
+  assert.equal(scoresByNickname.get('Pablo')?.currentPlacement, 4)
+
+  assert.ok((PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[1]) > (PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[2]))
+  assert.ok((PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[2]) > (PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[3]))
+})
+
+test('mantiene el finish order PVP una vez asignado aunque otros jugadores resuelvan después', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      attemptsPerRound: 4,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    guess: 'queso',
+  })
+
+  let snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'pvp') {
+    throw new Error('Expected an active PVP round snapshot.')
+  }
+
+  assert.equal(snapshot.round.players.find((player) => player.nickname === 'Ana')?.finishPlacement, 1)
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest',
+    guess: 'queso',
+  })
+
+  snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'pvp') {
+    throw new Error('Expected an active PVP round snapshot.')
+  }
+
+  assert.equal(snapshot.round.players.find((player) => player.nickname === 'Ana')?.finishPlacement, 1)
+  assert.equal(snapshot.round.players.find((player) => player.nickname === 'Luis')?.finishPlacement, 2)
 })
 
 test('el inicio PVP real sigue bloqueado si faltan jugadores', async () => {

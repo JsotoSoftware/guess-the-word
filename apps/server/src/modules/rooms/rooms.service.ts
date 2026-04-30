@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common'
 import {
   DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
   MIN_PLAYERS_BY_MODE,
+  PVP_BASE_POINTS,
+  PVP_PLACEMENT_BONUSES,
   ROOM_CODE_LENGTH,
   type ActiveRoundRoomSnapshot,
   type CloseRoomResponse,
@@ -151,6 +153,7 @@ interface LiveRoom {
   settings: RoomSettings
   hostPlayerId: string
   players: LivePlayer[]
+  scoreboard: ScoreEntry[]
   createdAt: string
   lastActivityAt: string
   currentRoundNumber: number
@@ -238,6 +241,14 @@ export class RoomsService {
       settings,
       hostPlayerId,
       players: [hostPlayer],
+      scoreboard: [
+        {
+          playerId: hostPlayer.playerId,
+          nickname: hostPlayer.nickname,
+          totalPoints: 0,
+          currentPlacement: null,
+        },
+      ],
       createdAt,
       lastActivityAt: createdAt,
       currentRoundNumber: 0,
@@ -280,6 +291,12 @@ export class RoomsService {
     })
 
     room.players.push(player)
+    room.scoreboard.push({
+      playerId: player.playerId,
+      nickname: player.nickname,
+      totalPoints: 0,
+      currentPlacement: null,
+    })
     this.touchRoom(room)
 
     return {
@@ -387,11 +404,15 @@ export class RoomsService {
     }
 
     try {
-      room.activePvpRound.state = this.roundStateService.applyPvpGuess(
-        room.activePvpRound.state,
+      const previousRoundState = room.activePvpRound.state
+      const nextRoundState = this.roundStateService.applyPvpGuess(
+        previousRoundState,
         player.playerId,
         normalizedGuess,
       )
+
+      room.activePvpRound.state = nextRoundState
+      this.applyPvpScoreUpdates(room, previousRoundState, nextRoundState)
       this.touchRoom(room)
 
       return {
@@ -523,6 +544,8 @@ export class RoomsService {
 
     const [removedPlayer] = room.players.splice(playerIndex, 1)
 
+    room.scoreboard = room.scoreboard.filter((scoreEntry) => scoreEntry.playerId !== removedPlayer.playerId)
+
     if (room.activePvpRound) {
       room.activePvpRound.state = {
         ...room.activePvpRound.state,
@@ -624,7 +647,7 @@ export class RoomsService {
       throw new Error(`The room ${room.roomCode} does not have an active PVP round.`)
     }
 
-    const scoreboard = this.buildInitialScoreboard(room.players)
+    const scoreboard = this.buildScoreboard(room)
     const timer = this.buildTimerState(room.activePvpRound)
 
     return {
@@ -652,13 +675,61 @@ export class RoomsService {
     }
   }
 
-  private buildInitialScoreboard(players: LivePlayer[]): ScoreEntry[] {
-    return players.map((player) => ({
-      playerId: player.playerId,
-      nickname: player.nickname,
-      totalPoints: 0,
-      currentPlacement: null,
-    }))
+  private buildScoreboard(room: LiveRoom): ScoreEntry[] {
+    const placementsByPlayerId = new Map(
+      room.activePvpRound?.state.players.map((player) => [player.playerId, player.finishPlacement]) ?? [],
+    )
+
+    return room.scoreboard
+      .map((entry) => ({
+        ...entry,
+        currentPlacement: placementsByPlayerId.get(entry.playerId) ?? null,
+      }))
+      .sort((left, right) => {
+        if (right.totalPoints !== left.totalPoints) {
+          return right.totalPoints - left.totalPoints
+        }
+
+        if (left.currentPlacement !== null && right.currentPlacement !== null) {
+          return left.currentPlacement - right.currentPlacement
+        }
+
+        if (left.currentPlacement !== null) {
+          return -1
+        }
+
+        if (right.currentPlacement !== null) {
+          return 1
+        }
+
+        return left.nickname.localeCompare(right.nickname)
+      })
+  }
+
+  private applyPvpScoreUpdates(
+    room: LiveRoom,
+    previousRoundState: EnginePvpRoundState,
+    nextRoundState: EnginePvpRoundState,
+  ): void {
+    for (const updatedPlayer of nextRoundState.players) {
+      const previousPlayer = previousRoundState.players.find((player) => player.playerId === updatedPlayer.playerId)
+
+      if (!previousPlayer || previousPlayer.solved || !updatedPlayer.solved || updatedPlayer.finishPlacement === null) {
+        continue
+      }
+
+      const scoreEntry = room.scoreboard.find((entry) => entry.playerId === updatedPlayer.playerId)
+
+      if (!scoreEntry) {
+        continue
+      }
+
+      scoreEntry.totalPoints += this.calculatePvpRoundPoints(updatedPlayer.finishPlacement)
+    }
+  }
+
+  private calculatePvpRoundPoints(finishPlacement: number): number {
+    return PVP_BASE_POINTS + (PVP_PLACEMENT_BONUSES[finishPlacement] ?? 0)
   }
 
   private buildTimerState(activeRound: LivePvpRound, now = new Date()): TimerState {

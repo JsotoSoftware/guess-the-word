@@ -462,7 +462,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.2</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.3</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -568,23 +568,28 @@ export function RoomPage() {
             </div>
           </SectionCard>
 
-          <SectionCard title="Estado del room" description="Los guesses y los intentos deben mantenerse aislados por jugador.">
+          <SectionCard title="Ranking y finish order" description="El scoreboard se actualiza en tiempo real con placement y puntos acumulados.">
             <div className="space-y-3 text-sm text-slate-300">
-              {pvpRound.players.map((player) => {
-                const scoreEntry = pvpRound.scoreboard.find((entry) => entry.playerId === player.playerId)
+              {pvpRound.scoreboard.map((scoreEntry, index) => {
+                const player = pvpRound.players.find((candidate) => candidate.playerId === scoreEntry.playerId)
 
                 return (
-                  <div key={player.playerId} className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div key={scoreEntry.playerId} className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-medium text-white">{player.nickname}</p>
+                      <div>
+                        <p className="font-medium text-white">#{index + 1} · {scoreEntry.nickname}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                          {scoreEntry.currentPlacement === null ? 'Aún sin resolver' : `Terminó en puesto ${scoreEntry.currentPlacement}`}
+                        </p>
+                      </div>
                       <div className="flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Intentos: {player.attemptsLeft}</span>
-                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Puntos: {scoreEntry?.totalPoints ?? 0}</span>
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Puntos: {scoreEntry.totalPoints}</span>
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Intentos: {player?.attemptsLeft ?? 0}</span>
                       </div>
                     </div>
-                    <p className="mt-2 text-slate-500">Guesses enviados: {player.guessHistory.length}</p>
-                    {player.solved ? <p className="mt-2 text-emerald-300">Ya resolvió la palabra.</p> : null}
-                    {player.outOfAttempts ? <p className="mt-2 text-rose-300">Se quedó sin intentos.</p> : null}
+                    <p className="mt-2 text-slate-500">Guesses enviados: {player?.guessHistory.length ?? 0}</p>
+                    {player?.solved ? <p className="mt-2 text-emerald-300">Ya resolvió la palabra.</p> : null}
+                    {player?.outOfAttempts ? <p className="mt-2 text-rose-300">Se quedó sin intentos.</p> : null}
                   </div>
                 )
               })}
@@ -620,7 +625,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.2</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.3</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}

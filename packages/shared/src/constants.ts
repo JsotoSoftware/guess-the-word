@@ -9,6 +9,14 @@ export const MIN_PLAYERS_BY_MODE: Record<GameMode, number> = {
   coop: 1,
 }
 
+export const PVP_BASE_POINTS = 100
+
+export const PVP_PLACEMENT_BONUSES: Record<number, number> = {
+  1: 50,
+  2: 25,
+  3: 10,
+}
+
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
   mode: 'pvp',
   totalRounds: 5,
