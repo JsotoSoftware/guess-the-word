@@ -633,7 +633,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.2</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.3</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -768,6 +768,72 @@ export function RoomPage() {
     )
   }
 
+  if (summaryRoom && summaryRoom.summary.mode === 'coop') {
+    const summaryCountdownSeconds = Math.max(
+      Math.ceil((new Date(summaryRoom.summaryAutoAdvanceAt).getTime() - clockNow) / 1000),
+      0,
+    )
+
+    return (
+      <div className="space-y-8">
+        <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 5.3</p>
+            <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
+            <p className="mt-3 max-w-2xl text-slate-300">
+              La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-200">
+              Autoavance: {formatRemainingSeconds(summaryCountdownSeconds)}
+            </span>
+            <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-200">
+              Resultado: {summaryRoom.summary.outcome === 'won' ? 'Victoria' : 'Derrota'}
+            </span>
+            <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+              {connected ? 'Conectado' : 'Reconectando'}
+            </span>
+          </div>
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <SectionCard title="Resultado de la ronda" description="Co-op no usa puntos ni ranking; solo victorias y derrotas compartidas.">
+            <div className="space-y-4 text-sm text-slate-300">
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p className="font-medium text-white">
+                  {summaryRoom.summary.outcome === 'won' ? 'El equipo acertó la palabra.' : 'El equipo agotó los intentos compartidos.'}
+                </p>
+                <p className="mt-2 text-slate-400">Intentos restantes: {summaryRoom.summary.attemptsLeft}</p>
+              </div>
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p>Rondas ganadas: <span className="font-medium text-white">{summaryRoom.summary.roundsWon}</span></p>
+                <p className="mt-2">Rondas perdidas: <span className="font-medium text-white">{summaryRoom.summary.roundsLost}</span></p>
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Estado del equipo" description="Todos los jugadores comparten el mismo resultado de ronda.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {summaryRoom.players.map((player) => (
+                <div key={player.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div>
+                    <p className="font-medium text-white">{player.nickname}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{player.connectionState}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {player.isHost ? <span className="rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-brand-200">Host</span> : null}
+                    {player.playerId === currentPlayerId ? <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-emerald-200">Tú</span> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+      </div>
+    )
+  }
+
   if (summaryRoom && summaryRoom.summary.mode === 'pvp') {
     const summaryCountdownSeconds = Math.max(
       Math.ceil((new Date(summaryRoom.summaryAutoAdvanceAt).getTime() - clockNow) / 1000),
@@ -871,7 +937,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.2</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.3</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}

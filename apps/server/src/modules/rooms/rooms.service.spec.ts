@@ -445,7 +445,7 @@ test('en cooperativo rechaza guesses duplicados del room sin gastar intentos com
   assert.equal(snapshot.round.guessHistory.length, 1)
 })
 
-test('en cooperativo una palabra correcta marca la ronda como ganada y bloquea más guesses', async () => {
+test('en cooperativo una palabra correcta marca la ronda como ganada y actualiza roundsWon sin generar score', async () => {
   const service = createServiceWithWord('bosque')
   const createdRoom = service.createRoom({
     nickname: 'Ana',
@@ -471,12 +471,15 @@ test('en cooperativo una palabra correcta marca la ronda como ganada y bloquea m
 
   const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
 
-  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'coop') {
-    throw new Error('Expected an active Co-op round snapshot.')
+  if (snapshot.viewState !== 'round_summary' || snapshot.summary.mode !== 'coop') {
+    throw new Error('Expected a Co-op round summary snapshot.')
   }
 
-  assert.equal(snapshot.round.status, 'won')
-  assert.equal(snapshot.round.attemptsLeft, 3)
+  assert.equal(snapshot.summary.outcome, 'won')
+  assert.equal(snapshot.summary.attemptsLeft, 3)
+  assert.equal(snapshot.summary.roundsWon, 1)
+  assert.equal(snapshot.summary.roundsLost, 0)
+  assert.equal('scoreboard' in snapshot.summary, false)
 
   assert.throws(
     () => service.submitGuess({
@@ -486,6 +489,49 @@ test('en cooperativo una palabra correcta marca la ronda como ganada y bloquea m
     }),
     (error) => error instanceof Error && 'code' in error && error.code === 'ROUND_NOT_ACTIVE',
   )
+})
+
+test('en cooperativo agotar los intentos marca derrota y actualiza roundsLost', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest',
+    guess: 'frutas',
+  })
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_summary' || snapshot.summary.mode !== 'coop') {
+    throw new Error('Expected a Co-op round summary snapshot.')
+  }
+
+  assert.equal(snapshot.summary.outcome, 'lost')
+  assert.equal(snapshot.summary.attemptsLeft, 0)
+  assert.equal(snapshot.summary.roundsWon, 0)
+  assert.equal(snapshot.summary.roundsLost, 1)
+  assert.equal('scoreboard' in snapshot.summary, false)
 })
 
 test('al iniciar una ronda PVP se elige una palabra y todos entran a la misma ronda activa', async () => {

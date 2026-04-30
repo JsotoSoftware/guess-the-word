@@ -157,6 +157,8 @@ interface LiveRoom {
   hostPlayerId: string
   players: LivePlayer[]
   scoreboard: ScoreEntry[]
+  roundsWon: number
+  roundsLost: number
   createdAt: string
   lastActivityAt: string
   currentRoundNumber: number
@@ -253,6 +255,8 @@ export class RoomsService {
           currentPlacement: null,
         },
       ],
+      roundsWon: 0,
+      roundsLost: 0,
       createdAt,
       lastActivityAt: createdAt,
       currentRoundNumber: 0,
@@ -413,11 +417,15 @@ export class RoomsService {
       }
 
       try {
-        room.activeCoopRound = this.roundStateService.applyCoopGuess(
+        const previousRoundState = room.activeCoopRound
+        const nextRoundState = this.roundStateService.applyCoopGuess(
           room.activeCoopRound,
           normalizedGuess,
           player.playerId,
         )
+
+        room.activeCoopRound = nextRoundState
+        this.applyCoopRoundOutcomeUpdate(room, previousRoundState, nextRoundState)
         this.touchRoom(room)
 
         return {
@@ -679,6 +687,10 @@ export class RoomsService {
         return this.buildRoundSummarySnapshot(room, currentPlayerId)
       }
 
+      if (room.activeCoopRound && room.activeCoopRound.status !== 'active') {
+        return this.buildCoopRoundSummarySnapshot(room, currentPlayerId)
+      }
+
       return this.buildActiveRoundSnapshot(room, currentPlayerId)
     }
 
@@ -807,6 +819,44 @@ export class RoomsService {
     }
   }
 
+  private buildCoopRoundSummarySnapshot(room: LiveRoom, currentPlayerId: string): RoundSummaryRoomSnapshot {
+    const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
+
+    if (!room.activeCoopRound || room.activeCoopRound.status === 'active' || !room.activeCoopRound.completedAt) {
+      throw new Error(`The room ${room.roomCode} does not have a completed Co-op round.`)
+    }
+
+    const summaryAutoAdvanceAt = new Date(
+      Date.parse(room.activeCoopRound.completedAt) + room.settings.roundSummaryAutoAdvanceSeconds * 1000,
+    ).toISOString()
+
+    return {
+      roomCode: room.roomCode,
+      status: 'in_game',
+      viewState: 'round_summary',
+      settings: room.settings,
+      hostPlayerId: room.hostPlayerId,
+      players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+      currentPlayerId,
+      minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+      canCurrentPlayerStartMatch: false,
+      createdAt: room.createdAt,
+      currentRoundNumber: room.currentRoundNumber,
+      totalRounds: room.settings.totalRounds,
+      summary: {
+        mode: 'coop',
+        secretWord: room.activeCoopRound.secretWord,
+        outcome: room.activeCoopRound.status,
+        attemptsLeft: room.activeCoopRound.attemptsLeft,
+        roundsWon: room.roundsWon,
+        roundsLost: room.roundsLost,
+      },
+      canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
+      summaryAutoAdvanceAt,
+      chatMessages: [],
+    }
+  }
+
   private buildScoreboard(room: LiveRoom): ScoreEntry[] {
     const placementsByPlayerId = new Map(
       room.activePvpRound?.state.players.map((player) => [player.playerId, player.finishPlacement]) ?? [],
@@ -897,6 +947,23 @@ export class RoomsService {
 
   private calculatePvpRoundPoints(finishPlacement: number): number {
     return PVP_BASE_POINTS + (PVP_PLACEMENT_BONUSES[finishPlacement] ?? 0)
+  }
+
+  private applyCoopRoundOutcomeUpdate(
+    room: LiveRoom,
+    previousRoundState: EngineCoopRoundState,
+    nextRoundState: EngineCoopRoundState,
+  ): void {
+    if (previousRoundState.status !== 'active' || nextRoundState.status === 'active') {
+      return
+    }
+
+    if (nextRoundState.status === 'won') {
+      room.roundsWon += 1
+      return
+    }
+
+    room.roundsLost += 1
   }
 
   private expirePvpTimerIfNeeded(room: LiveRoom, now = new Date()): boolean {
