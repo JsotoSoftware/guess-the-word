@@ -3,6 +3,7 @@ import {
   DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
   MIN_PLAYERS_BY_MODE,
   ROOM_CODE_LENGTH,
+  type ActiveRoundRoomSnapshot,
   type CloseRoomResponse,
   type CreateRoomResponse,
   type GameMode,
@@ -13,14 +14,20 @@ import {
   type PlayerSummary,
   type RoomClosedEvent,
   type RoomSettings,
+  type RoomSnapshot,
   type RoomStatus,
+  type ScoreEntry,
+  type StartMatchResponse,
+  type TimerState,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
+import { RoundStateService, type PvpRoundState as EnginePvpRoundState } from '../game/round-state.service'
+import { WordsService } from '../words/words.service'
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_ROOM_CODE_ATTEMPTS = 100
-const ROOM_IDLE_TIMEOUT_MS = 6 * 60 * 1000
+const ROOM_IDLE_TIMEOUT_MS = 5 * 60 * 1000
 
 class RoomActionError extends Error {
   constructor(
@@ -87,6 +94,12 @@ export class RoomNotInLobbyError extends RoomActionError {
   }
 }
 
+export class StartNotAllowedError extends RoomActionError {
+  constructor(message: string, details?: Record<string, unknown>) {
+    super('START_NOT_ALLOWED', message, details)
+  }
+}
+
 interface LivePlayer {
   playerId: string
   nickname: string
@@ -97,6 +110,12 @@ interface LivePlayer {
   resumeToken: string
 }
 
+interface LivePvpRound {
+  state: EnginePvpRoundState
+  timerDurationSeconds: number | null
+  timerEndsAt: string | null
+}
+
 interface LiveRoom {
   roomCode: string
   status: RoomStatus
@@ -105,6 +124,8 @@ interface LiveRoom {
   players: LivePlayer[]
   createdAt: string
   lastActivityAt: string
+  currentRoundNumber: number
+  activePvpRound: LivePvpRound | null
 }
 
 interface CreateRoomInput {
@@ -125,6 +146,11 @@ interface UpdateRoomSettingsInput {
   settings: RoomSettings
 }
 
+interface StartMatchInput {
+  roomCode: string
+  socketId: string
+}
+
 interface CloseRoomInput {
   roomCode: string
   socketId: string
@@ -137,7 +163,7 @@ interface LeaveRoomInput {
 
 interface RoomStateTarget {
   socketId: string
-  room: LobbyRoomSnapshot
+  room: RoomSnapshot
 }
 
 interface LeaveRoomResult {
@@ -153,6 +179,9 @@ interface RoomMembershipResult {
 @Injectable()
 export class RoomsService {
   private readonly rooms = new Map<string, LiveRoom>()
+  private readonly roundStateService = new RoundStateService()
+
+  constructor(private readonly wordsService?: WordsService) {}
 
   createRoom(input: CreateRoomInput): CreateRoomResponse {
     const createdAt = new Date().toISOString()
@@ -176,6 +205,8 @@ export class RoomsService {
       players: [hostPlayer],
       createdAt,
       lastActivityAt: createdAt,
+      currentRoundNumber: 0,
+      activePvpRound: null,
     }
 
     this.rooms.set(roomCode, room)
@@ -238,6 +269,67 @@ export class RoomsService {
 
     return {
       room: this.buildLobbySnapshot(room, player.playerId),
+    }
+  }
+
+  async startMatch(input: StartMatchInput): Promise<StartMatchResponse> {
+    const room = this.getRoomOrThrow(input.roomCode)
+    this.ensureRoomIsLobby(room)
+
+    const player = this.getPlayerBySocketId(room, input.socketId)
+
+    if (player.playerId !== room.hostPlayerId) {
+      throw new NotHostError()
+    }
+
+    const minPlayersRequired = MIN_PLAYERS_BY_MODE[room.settings.mode]
+
+    if (room.players.length < minPlayersRequired) {
+      throw new StartNotAllowedError('La sala aún no cumple con el mínimo de jugadores para iniciar.', {
+        currentPlayers: room.players.length,
+        minPlayersRequired,
+        mode: room.settings.mode,
+      })
+    }
+
+    if (room.settings.mode !== 'pvp') {
+      throw new StartNotAllowedError('El arranque cooperativo se implementará en la fase 5.', {
+        mode: room.settings.mode,
+      })
+    }
+
+    if (!this.wordsService) {
+      throw new Error('WordsService is not available.')
+    }
+
+    const secretWord = await this.wordsService.getRandomSecretWord({})
+    const startedAt = new Date().toISOString()
+    const roundState = this.roundStateService.createPvpRoundState(
+      secretWord.word,
+      room.players.map((roomPlayer) => ({
+        playerId: roomPlayer.playerId,
+        nickname: roomPlayer.nickname,
+      })),
+      room.settings.attemptsPerRound,
+      startedAt,
+    )
+
+    const timerDurationSeconds = room.settings.pvpTimerSeconds
+    const timerEndsAt = timerDurationSeconds === null
+      ? null
+      : new Date(Date.parse(startedAt) + timerDurationSeconds * 1000).toISOString()
+
+    room.status = 'in_game'
+    room.currentRoundNumber = 1
+    room.activePvpRound = {
+      state: roundState,
+      timerDurationSeconds,
+      timerEndsAt,
+    }
+    this.touchRoom(room)
+
+    return {
+      room: this.buildActiveRoundSnapshot(room, player.playerId),
     }
   }
 
@@ -316,7 +408,7 @@ export class RoomsService {
 
     return room.players.map((player) => ({
       socketId: player.socketId,
-      room: this.buildLobbySnapshot(room, player.playerId),
+      room: this.buildRoomSnapshot(room, player.playerId),
     }))
   }
 
@@ -352,7 +444,14 @@ export class RoomsService {
       throw new PlayerNotInRoomError(room.roomCode)
     }
 
-    room.players.splice(playerIndex, 1)
+    const [removedPlayer] = room.players.splice(playerIndex, 1)
+
+    if (room.activePvpRound) {
+      room.activePvpRound.state = {
+        ...room.activePvpRound.state,
+        players: room.activePvpRound.state.players.filter((player) => player.playerId !== removedPlayer.playerId),
+      }
+    }
 
     if (room.players.length === 0) {
       this.rooms.delete(room.roomCode)
@@ -413,13 +512,17 @@ export class RoomsService {
     }
   }
 
-  private buildLobbySnapshot(room: LiveRoom, currentPlayerId: string): LobbyRoomSnapshot {
-    const minPlayersRequired = MIN_PLAYERS_BY_MODE[room.settings.mode]
-    const currentPlayer = room.players.find((player) => player.playerId === currentPlayerId)
-
-    if (!currentPlayer) {
-      throw new PlayerNotInRoomError(room.roomCode)
+  private buildRoomSnapshot(room: LiveRoom, currentPlayerId: string): RoomSnapshot {
+    if (room.status === 'in_game') {
+      return this.buildActiveRoundSnapshot(room, currentPlayerId)
     }
+
+    return this.buildLobbySnapshot(room, currentPlayerId)
+  }
+
+  private buildLobbySnapshot(room: LiveRoom, currentPlayerId: string): LobbyRoomSnapshot {
+    const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
+    const minPlayersRequired = MIN_PLAYERS_BY_MODE[room.settings.mode]
 
     return {
       roomCode: room.roomCode,
@@ -435,6 +538,85 @@ export class RoomsService {
       currentRoundNumber: 0,
       chatMessages: [],
     }
+  }
+
+  private buildActiveRoundSnapshot(room: LiveRoom, currentPlayerId: string): ActiveRoundRoomSnapshot {
+    const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
+
+    if (!room.activePvpRound) {
+      throw new Error(`The room ${room.roomCode} does not have an active PVP round.`)
+    }
+
+    const scoreboard = this.buildInitialScoreboard(room.players)
+    const timer = this.buildTimerState(room.activePvpRound)
+
+    return {
+      roomCode: room.roomCode,
+      status: 'in_game',
+      viewState: 'round_active',
+      settings: room.settings,
+      hostPlayerId: room.hostPlayerId,
+      players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+      currentPlayerId,
+      minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+      canCurrentPlayerStartMatch: false,
+      createdAt: room.createdAt,
+      currentRoundNumber: room.currentRoundNumber,
+      totalRounds: room.settings.totalRounds,
+      round: {
+        mode: 'pvp',
+        wordLength: room.activePvpRound.state.wordLength,
+        submissionMode: room.settings.submissionMode,
+        timer,
+        scoreboard,
+        players: room.activePvpRound.state.players.map((player) => ({ ...player })),
+      },
+      chatMessages: [],
+    }
+  }
+
+  private buildInitialScoreboard(players: LivePlayer[]): ScoreEntry[] {
+    return players.map((player) => ({
+      playerId: player.playerId,
+      nickname: player.nickname,
+      totalPoints: 0,
+      currentPlacement: null,
+    }))
+  }
+
+  private buildTimerState(activeRound: LivePvpRound, now = new Date()): TimerState {
+    if (activeRound.timerDurationSeconds === null || activeRound.timerEndsAt === null) {
+      return {
+        enabled: false,
+        durationSeconds: null,
+        remainingSeconds: null,
+        startedAt: null,
+        endsAt: null,
+      }
+    }
+
+    const remainingSeconds = Math.max(
+      Math.ceil((new Date(activeRound.timerEndsAt).getTime() - now.getTime()) / 1000),
+      0,
+    )
+
+    return {
+      enabled: true,
+      durationSeconds: activeRound.timerDurationSeconds,
+      remainingSeconds,
+      startedAt: activeRound.state.startedAt,
+      endsAt: activeRound.timerEndsAt,
+    }
+  }
+
+  private getCurrentPlayer(room: LiveRoom, currentPlayerId: string): LivePlayer {
+    const currentPlayer = room.players.find((player) => player.playerId === currentPlayerId)
+
+    if (!currentPlayer) {
+      throw new PlayerNotInRoomError(room.roomCode)
+    }
+
+    return currentPlayer
   }
 
   private toPlayerSummary(player: LivePlayer, hostPlayerId: string): PlayerSummary {

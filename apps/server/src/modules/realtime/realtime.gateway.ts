@@ -21,6 +21,8 @@ import {
   type LeaveRoomRequest,
   type LeaveRoomResponse,
   type RoomClosedEvent,
+  type StartMatchRequest,
+  type StartMatchResponse,
   type UpdateRoomSettingsRequest,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
@@ -178,6 +180,29 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`room:update_settings failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.roomStartMatch)
+  async handleStartMatch(
+    @MessageBody() payload: StartMatchRequest,
+    @ConnectedSocket() client: Socket,
+  ): Promise<Ack<StartMatchResponse>> {
+    try {
+      const response = await this.roomsService.startMatch({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+      })
+
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`room:start_match failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

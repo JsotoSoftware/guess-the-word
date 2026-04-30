@@ -1,4 +1,9 @@
-import { type GuessSubmissionMode, type LobbyRoomSnapshot, type RoomSettings } from '@guess-the-word/shared'
+import {
+  type ActiveRoundRoomSnapshot,
+  type GuessSubmissionMode,
+  type LobbyRoomSnapshot,
+  type RoomSettings,
+} from '@guess-the-word/shared'
 import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { SectionCard } from '../components/ui/SectionCard'
@@ -13,7 +18,7 @@ interface LobbySettingsFormState {
   maxPlayers: string
 }
 
-function formatSubmissionMode(value: LobbyRoomSnapshot['settings']['submissionMode']): string {
+function formatSubmissionMode(value: GuessSubmissionMode): string {
   return value === 'auto_send' ? 'Autoenvío' : 'Envío manual'
 }
 
@@ -68,10 +73,21 @@ function getStartMessage(room: LobbyRoomSnapshot, isHost: boolean): string {
   }
 
   if (room.settings.mode === 'coop') {
-    return 'En cooperativo el inicio ya está habilitado incluso con un solo jugador.'
+    return 'El inicio cooperativo se implementará en la fase 5.'
   }
 
-  return 'La sala ya cumple las restricciones para iniciar la partida.'
+  return 'La sala ya cumple las restricciones para iniciar la partida PVP.'
+}
+
+function formatRemainingSeconds(seconds: number | null): string {
+  if (seconds === null) {
+    return 'Sin temporizador'
+  }
+
+  const safeSeconds = Math.max(seconds, 0)
+  const minutes = Math.floor(safeSeconds / 60)
+  const remainder = safeSeconds % 60
+  return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 }
 
 export function RoomPage() {
@@ -83,6 +99,7 @@ export function RoomPage() {
     currentPlayerId,
     closedRoomCode,
     updateRoomSettings,
+    startMatch,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
@@ -91,44 +108,87 @@ export function RoomPage() {
   const [actionMessage, setActionMessage] = useState<string | null>(null)
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
+  const [isStartingMatch, setIsStartingMatch] = useState(false)
   const [isLeavingRoom, setIsLeavingRoom] = useState(false)
   const [isClosingRoom, setIsClosingRoom] = useState(false)
+  const [clockNow, setClockNow] = useState(() => Date.now())
 
-  const currentRoom = useMemo(() => {
-    if (!room || room.roomCode !== code.toUpperCase() || room.viewState !== 'lobby') {
+  const normalizedCode = code.toUpperCase()
+
+  const lobbyRoom = useMemo(() => {
+    if (!room || room.roomCode !== normalizedCode || room.viewState !== 'lobby') {
       return null
     }
 
     return room as LobbyRoomSnapshot
-  }, [code, room])
+  }, [normalizedCode, room])
+
+  const activeRoom = useMemo(() => {
+    if (!room || room.roomCode !== normalizedCode || room.viewState !== 'round_active') {
+      return null
+    }
+
+    return room as ActiveRoundRoomSnapshot
+  }, [normalizedCode, room])
 
   const [settingsForm, setSettingsForm] = useState<LobbySettingsFormState | null>(
-    currentRoom ? toSettingsFormState(currentRoom.settings) : null,
+    lobbyRoom ? toSettingsFormState(lobbyRoom.settings) : null,
   )
 
   useEffect(() => {
-    if (currentRoom) {
-      setSettingsForm(toSettingsFormState(currentRoom.settings))
+    if (lobbyRoom) {
+      setSettingsForm(toSettingsFormState(lobbyRoom.settings))
     }
-  }, [currentRoom])
+  }, [lobbyRoom])
 
   useEffect(() => {
-    if (closedRoomCode === code.toUpperCase()) {
+    if (closedRoomCode === normalizedCode) {
       clearClosedRoomCode()
       navigate('/', { replace: true })
     }
-  }, [clearClosedRoomCode, closedRoomCode, code, navigate])
+  }, [clearClosedRoomCode, closedRoomCode, navigate, normalizedCode])
 
-  const currentPlayer = currentRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
-  const isHost = currentPlayer?.isHost ?? false
+  const currentRoomPlayer = (lobbyRoom ?? activeRoom)?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const isHost = currentRoomPlayer?.isHost ?? false
+
+  const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
+
+  useEffect(() => {
+    if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
+      return
+    }
+
+    const interval = window.setInterval(() => {
+      setClockNow(Date.now())
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [pvpRound])
+
+  const activeRoundPlayer = pvpRound?.players.find((player) => player.playerId === currentPlayerId) ?? null
+
+  const activeTimerLabel = useMemo(() => {
+    if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
+      return 'Sin temporizador'
+    }
+
+    const remainingSeconds = Math.max(
+      Math.ceil((new Date(pvpRound.timer.endsAt).getTime() - clockNow) / 1000),
+      0,
+    )
+
+    return formatRemainingSeconds(remainingSeconds)
+  }, [clockNow, pvpRound])
 
   const handleCopyRoomCode = async () => {
-    if (!currentRoom) {
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+
+    if (!roomCode) {
       return
     }
 
     try {
-      await navigator.clipboard.writeText(currentRoom.roomCode)
+      await navigator.clipboard.writeText(roomCode)
       setCopyFeedback('Código copiado')
     } catch {
       setCopyFeedback('No se pudo copiar el código')
@@ -161,7 +221,7 @@ export function RoomPage() {
   const handleSaveSettings = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!currentRoom || !settingsForm) {
+    if (!lobbyRoom || !settingsForm) {
       return
     }
 
@@ -171,8 +231,8 @@ export function RoomPage() {
 
     try {
       await updateRoomSettings({
-        roomCode: currentRoom.roomCode,
-        settings: buildRoomSettings(settingsForm, currentRoom),
+        roomCode: lobbyRoom.roomCode,
+        settings: buildRoomSettings(settingsForm, lobbyRoom),
       })
       setActionMessage('Configuración sincronizada con todos los jugadores del lobby.')
     } catch (error) {
@@ -182,8 +242,33 @@ export function RoomPage() {
     }
   }
 
+  const handleStartMatch = async () => {
+    if (!lobbyRoom) {
+      return
+    }
+
+    if (lobbyRoom.settings.mode !== 'pvp') {
+      setActionMessage('El inicio cooperativo llegará en la fase 5.')
+      return
+    }
+
+    setActionMessage(null)
+    setSettingsError(null)
+    setIsStartingMatch(true)
+
+    try {
+      await startMatch({ roomCode: lobbyRoom.roomCode })
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo iniciar la partida.')
+    } finally {
+      setIsStartingMatch(false)
+    }
+  }
+
   const handleLeaveRoom = async () => {
-    if (!currentRoom) {
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+
+    if (!roomCode) {
       return
     }
 
@@ -192,7 +277,7 @@ export function RoomPage() {
     setIsLeavingRoom(true)
 
     try {
-      await leaveRoom({ roomCode: currentRoom.roomCode })
+      await leaveRoom({ roomCode })
       navigate('/')
     } catch (error) {
       setActionMessage(error instanceof Error ? error.message : 'No se pudo salir de la sala.')
@@ -201,7 +286,9 @@ export function RoomPage() {
   }
 
   const handleCloseRoom = async () => {
-    if (!currentRoom) {
+    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
+
+    if (!roomCode) {
       return
     }
 
@@ -210,31 +297,115 @@ export function RoomPage() {
     setIsClosingRoom(true)
 
     try {
-      await closeRoom({ roomCode: currentRoom.roomCode })
+      await closeRoom({ roomCode })
     } catch (error) {
       setActionMessage(error instanceof Error ? error.message : 'No se pudo cerrar la sala.')
       setIsClosingRoom(false)
     }
   }
 
-  const handleStartPreview = () => {
-    if (!currentRoom) {
-      return
-    }
+  if (activeRoom && pvpRound) {
+    return (
+      <div className="space-y-8">
+        <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.1</p>
+            <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
+            <p className="mt-3 max-w-2xl text-slate-300">
+              Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleCopyRoomCode}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-brand-400 hover:text-white"
+            >
+              Copiar código
+            </button>
+            {isHost ? (
+              <button
+                type="button"
+                onClick={handleCloseRoom}
+                disabled={isClosingRoom}
+                className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isClosingRoom ? 'Cerrando sala...' : 'Cerrar sala'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              disabled={isLeavingRoom}
+              className="rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-100 transition hover:border-rose-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLeavingRoom ? 'Saliendo...' : 'Salir de la sala'}
+            </button>
+            <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+              {connected ? 'Conectado' : 'Reconectando'}
+            </span>
+          </div>
+        </section>
 
-    setActionMessage(
-      currentRoom.canCurrentPlayerStartMatch
-        ? 'La sala ya superó las restricciones de inicio. El arranque real de la partida se conectará en la fase 4/5.'
-        : getStartMessage(currentRoom, isHost),
+        {copyFeedback ? <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{copyFeedback}</div> : null}
+        {actionMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{actionMessage}</div> : null}
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+          <SectionCard title="Resumen de la ronda" description="Todos los clientes deben entrar sincronizados a la misma ronda PVP.">
+            <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p className="text-slate-500">Longitud de la palabra</p>
+                <p className="mt-1 font-medium text-white">{pvpRound.wordLength} letras</p>
+              </div>
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p className="text-slate-500">Modo de envío</p>
+                <p className="mt-1 font-medium text-white">{formatSubmissionMode(pvpRound.submissionMode)}</p>
+              </div>
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p className="text-slate-500">Temporizador</p>
+                <p className="mt-1 font-medium text-white">{activeTimerLabel}</p>
+              </div>
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                <p className="text-slate-500">Tus intentos</p>
+                <p className="mt-1 font-medium text-white">{activeRoundPlayer?.attemptsLeft ?? activeRoom.settings.attemptsPerRound}</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">
+              La captura y envío de guesses por jugador continúa en la fase 4.2. Esta pantalla valida el arranque sincronizado de la ronda, el tamaño del tablero y el temporizador opcional.
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Marcador inicial" description="Cada jugador arranca con sus propios intentos y el score parte en cero.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {pvpRound.players.map((player) => {
+                const scoreEntry = pvpRound.scoreboard.find((entry) => entry.playerId === player.playerId)
+
+                return (
+                  <div key={player.playerId} className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-white">{player.nickname}</p>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Intentos: {player.attemptsLeft}</span>
+                        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Puntos: {scoreEntry?.totalPoints ?? 0}</span>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-slate-500">Historial de guesses: {player.guessHistory.length}</p>
+                  </div>
+                )
+              })}
+            </div>
+          </SectionCard>
+        </div>
+      </div>
     )
   }
 
-  if (!currentRoom) {
+  if (!lobbyRoom) {
     return (
       <div className="space-y-6">
         <section className="rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow">
           <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Sala no disponible</p>
-          <h2 className="mt-2 text-3xl font-bold text-white">No hay una sesión activa para la sala {code.toUpperCase()}.</h2>
+          <h2 className="mt-2 text-3xl font-bold text-white">No hay una sesión activa para la sala {normalizedCode}.</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             Crea una sala o únete desde la pantalla principal para cargar el lobby en tiempo real. El flujo de reanudación después de refrescar la página se implementará en una fase posterior.
           </p>
@@ -254,10 +425,10 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 3.3</p>
-          <h2 className="mt-2 text-3xl font-bold text-white">Sala {currentRoom.roomCode}</h2>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.1</p>
+          <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
-            {currentPlayer ? `Conectado como ${currentPlayer.nickname}${currentPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
+            {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -298,7 +469,7 @@ export function RoomPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
         <SectionCard title="Jugadores en la sala" description="La lista debe actualizarse en tiempo real cuando alguien entra o sale del lobby.">
           <div className="space-y-3">
-            {currentRoom.players.map((player) => (
+            {lobbyRoom.players.map((player) => (
               <div key={player.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
                 <div>
                   <p className="font-medium text-white">{player.nickname}</p>
@@ -313,30 +484,29 @@ export function RoomPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Estado de inicio" description="Las restricciones cambian según el modo de la sala.">
+        <SectionCard title="Estado de inicio" description="El anfitrión ya puede arrancar una ronda PVP sincronizada desde este lobby.">
           <div className="space-y-4 text-sm text-slate-300">
             <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
               <p>
-                Jugadores actuales: <span className="font-medium text-white">{currentRoom.players.length}</span>
+                Jugadores actuales: <span className="font-medium text-white">{lobbyRoom.players.length}</span>
               </p>
               <p className="mt-2">
-                Mínimo requerido: <span className="font-medium text-white">{currentRoom.minPlayersRequired}</span>
+                Mínimo requerido: <span className="font-medium text-white">{lobbyRoom.minPlayersRequired}</span>
               </p>
               <p className="mt-2">
-                Inicio habilitado para ti: <span className="font-medium text-white">{currentRoom.canCurrentPlayerStartMatch ? 'Sí' : 'No'}</span>
+                Inicio habilitado para ti: <span className="font-medium text-white">{lobbyRoom.canCurrentPlayerStartMatch ? 'Sí' : 'No'}</span>
               </p>
             </div>
-            <p className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-slate-400">{getStartMessage(currentRoom, isHost)}</p>
+            <p className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-slate-400">{getStartMessage(lobbyRoom, isHost)}</p>
             <button
               type="button"
-              onClick={handleStartPreview}
-              disabled={!isHost}
+              onClick={handleStartMatch}
+              disabled={!isHost || isStartingMatch || !lobbyRoom.canCurrentPlayerStartMatch}
               className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
             >
-              {currentRoom.canCurrentPlayerStartMatch ? 'Inicio disponible' : 'Revisar restricción de inicio'}
+              {isStartingMatch ? 'Iniciando ronda...' : 'Iniciar ronda PVP'}
             </button>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">La activación real de la ronda llega en las fases 4 y 5.</p>
-            <p className="text-xs text-slate-500">Las salas del lobby se cerrarán automáticamente tras 5 minutos sin actividad.</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Las salas del lobby se cerrarán automáticamente tras 5 minutos sin actividad.</p>
           </div>
         </SectionCard>
       </div>
@@ -448,27 +618,27 @@ export function RoomPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Modo</p>
-                  <p className="mt-1 font-medium text-white">{formatMode(currentRoom.settings.mode)}</p>
+                  <p className="mt-1 font-medium text-white">{formatMode(lobbyRoom.settings.mode)}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Envío</p>
-                  <p className="mt-1 font-medium text-white">{formatSubmissionMode(currentRoom.settings.submissionMode)}</p>
+                  <p className="mt-1 font-medium text-white">{formatSubmissionMode(lobbyRoom.settings.submissionMode)}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Rondas</p>
-                  <p className="mt-1 font-medium text-white">{currentRoom.settings.totalRounds}</p>
+                  <p className="mt-1 font-medium text-white">{lobbyRoom.settings.totalRounds}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Intentos</p>
-                  <p className="mt-1 font-medium text-white">{currentRoom.settings.attemptsPerRound}</p>
+                  <p className="mt-1 font-medium text-white">{lobbyRoom.settings.attemptsPerRound}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Temporizador</p>
-                  <p className="mt-1 font-medium text-white">{formatTimer(currentRoom.settings.pvpTimerSeconds)}</p>
+                  <p className="mt-1 font-medium text-white">{formatTimer(lobbyRoom.settings.pvpTimerSeconds)}</p>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <p className="text-slate-500">Máx. jugadores</p>
-                  <p className="mt-1 font-medium text-white">{currentRoom.settings.maxPlayers ?? 'Sin límite'}</p>
+                  <p className="mt-1 font-medium text-white">{lobbyRoom.settings.maxPlayers ?? 'Sin límite'}</p>
                 </div>
               </div>
               <p className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-slate-400">Solo el anfitrión puede editar la configuración del lobby.</p>
@@ -479,8 +649,8 @@ export function RoomPage() {
         <SectionCard title="Chat del lobby" description="La visibilidad del panel queda lista aunque la mensajería real llega en la fase 6.">
           <div className="space-y-3 text-sm text-slate-300">
             <div className="min-h-48 rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-slate-400">
-              {currentRoom.chatMessages && currentRoom.chatMessages.length > 0 ? (
-                currentRoom.chatMessages.map((message) => (
+              {lobbyRoom.chatMessages && lobbyRoom.chatMessages.length > 0 ? (
+                lobbyRoom.chatMessages.map((message) => (
                   <div key={message.messageId} className="mb-3 rounded-2xl border border-white/5 bg-slate-900/70 px-3 py-2">
                     <p className="font-medium text-white">{message.senderNickname}</p>
                     <p className="mt-1">{message.text}</p>

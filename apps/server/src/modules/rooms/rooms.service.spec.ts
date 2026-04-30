@@ -5,7 +5,25 @@ import {
   NotHostError,
   RoomNotFoundError,
   RoomsService,
+  StartNotAllowedError,
 } from './rooms.service'
+
+function createServiceWithWord(word = 'queso') {
+  return new RoomsService({
+    async getRandomSecretWord() {
+      return {
+        id: 'word-1',
+        word,
+        language: 'spanish',
+        difficulty: null,
+        category: null,
+        length: word.length,
+        is_active: true,
+        created_at: '2026-01-01T00:00:00.000Z',
+      }
+    },
+  } as never)
+}
 
 test('genera códigos de sala únicos en un uso normal', () => {
   const service = new RoomsService()
@@ -140,6 +158,7 @@ test('sincroniza cambios de configuración para todos los jugadores del lobby', 
   const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
 
   assert.equal(targets.length, 2)
+  assert.equal(targets.every((target) => target.room.viewState === 'lobby'), true)
   assert.equal(targets.every((target) => target.room.settings.mode === 'coop'), true)
   assert.equal(targets.every((target) => target.room.settings.submissionMode === 'manual_submit'), true)
   assert.equal(targets.every((target) => target.room.settings.pvpTimerSeconds === null), true)
@@ -205,21 +224,6 @@ test('la salida de un jugador actualiza la lista y transfiere el host si hace fa
   assert.equal(targets[0].room.players[0].isHost, true)
 })
 
-test('en PVP el host no puede iniciar con menos de 2 jugadores', () => {
-  const service = new RoomsService()
-  const createdRoom = service.createRoom({
-    nickname: 'Ana',
-    settings: {
-      ...DEFAULT_ROOM_SETTINGS,
-      mode: 'pvp',
-    },
-    socketId: 'socket-host',
-  })
-
-  assert.equal(createdRoom.room.minPlayersRequired, 2)
-  assert.equal(createdRoom.room.canCurrentPlayerStartMatch, false)
-})
-
 test('la limpieza por inactividad cierra salas de lobby abandonadas', () => {
   const service = new RoomsService()
   const createdRoom = service.createRoom({
@@ -233,6 +237,21 @@ test('la limpieza por inactividad cierra salas de lobby abandonadas', () => {
   assert.equal(closedRooms.length, 1)
   assert.equal(closedRooms[0].roomCode, createdRoom.room.roomCode)
   assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+test('en PVP el host no puede iniciar con menos de 2 jugadores', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(createdRoom.room.minPlayersRequired, 2)
+  assert.equal(createdRoom.room.canCurrentPlayerStartMatch, false)
 })
 
 test('en cooperativo el host sí puede iniciar con un solo jugador', () => {
@@ -249,6 +268,141 @@ test('en cooperativo el host sí puede iniciar con un solo jugador', () => {
 
   assert.equal(createdRoom.room.minPlayersRequired, 1)
   assert.equal(createdRoom.room.canCurrentPlayerStartMatch, true)
+})
+
+test('al iniciar una ronda PVP se elige una palabra y todos entran a la misma ronda activa', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      pvpTimerSeconds: 90,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.viewState, 'round_active')
+  assert.equal(response.room.round.mode, 'pvp')
+  assert.equal(response.room.round.wordLength, 5)
+  assert.equal(response.room.currentRoundNumber, 1)
+})
+
+test('cada jugador recibe intentos independientes al comenzar la ronda PVP', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      attemptsPerRound: 7,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.round.mode, 'pvp')
+  assert.equal(response.room.round.players.length, 2)
+  assert.equal(response.room.round.players.every((player) => player.attemptsLeft === 7), true)
+})
+
+test('la ronda PVP incluye temporizador sincronizado cuando está habilitado', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      pvpTimerSeconds: 120,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.round.mode, 'pvp')
+  assert.equal(response.room.round.timer.enabled, true)
+  assert.equal(response.room.round.timer.durationSeconds, 120)
+  assert.ok(response.room.round.timer.startedAt)
+  assert.ok(response.room.round.timer.endsAt)
+})
+
+test('la ronda PVP no crea temporizador cuando está deshabilitado y conserva el modo de envío', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      submissionMode: 'manual_submit',
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.round.mode, 'pvp')
+  assert.equal(response.room.round.timer.enabled, false)
+  assert.equal(response.room.round.timer.durationSeconds, null)
+  assert.equal(response.room.round.submissionMode, 'manual_submit')
+})
+
+test('el inicio PVP real sigue bloqueado si faltan jugadores', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+    },
+    socketId: 'socket-host',
+  })
+
+  await assert.rejects(
+    () => service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' }),
+    StartNotAllowedError,
+  )
 })
 
 test('cerrar la pestaña elimina al jugador de la sala igual que salir manualmente', () => {
@@ -299,7 +453,6 @@ test('si el socket desconectado era el host, la sala transfiere el host restante
   assert.equal(targets[0].room.players[0].nickname, 'Luis')
   assert.equal(targets[0].room.players[0].isHost, true)
 })
-
 
 test('si se cierra la última pestaña, la sala se elimina', () => {
   const service = new RoomsService()
