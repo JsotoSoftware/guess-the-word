@@ -12,12 +12,14 @@ import {
   type JoinRoomResponse,
   type LeaveRoomResponse,
   type LobbyRoomSnapshot,
+  type PvpRoundPlacement,
   type PlayerConnectionState,
   type PlayerSummary,
   type RoomClosedEvent,
   type RoomSettings,
   type RoomSnapshot,
   type RoomStatus,
+  type RoundSummaryRoomSnapshot,
   type ScoreEntry,
   type StartMatchResponse,
   type SubmitGuessResponse,
@@ -392,6 +394,12 @@ export class RoomsService {
       throw new RoundNotActiveError()
     }
 
+    this.expirePvpTimerIfNeeded(room)
+
+    if (room.activePvpRound.state.status !== 'active') {
+      throw new RoundNotActiveError()
+    }
+
     const player = this.getPlayerBySocketId(room, input.socketId)
     const normalizedGuess = input.guess.trim().toLowerCase()
 
@@ -446,6 +454,18 @@ export class RoomsService {
       roomCode: room.roomCode,
       closedAt: new Date().toISOString(),
     }
+  }
+
+  expireElapsedPvpRounds(now = new Date()): string[] {
+    const updatedRoomCodes: string[] = []
+
+    for (const room of this.rooms.values()) {
+      if (this.expirePvpTimerIfNeeded(room, now)) {
+        updatedRoomCodes.push(room.roomCode)
+      }
+    }
+
+    return updatedRoomCodes
   }
 
   closeIdleRooms(now = new Date()): RoomClosedEvent[] {
@@ -614,6 +634,12 @@ export class RoomsService {
 
   private buildRoomSnapshot(room: LiveRoom, currentPlayerId: string): RoomSnapshot {
     if (room.status === 'in_game') {
+      this.expirePvpTimerIfNeeded(room)
+
+      if (room.activePvpRound?.state.status === 'completed') {
+        return this.buildRoundSummarySnapshot(room, currentPlayerId)
+      }
+
       return this.buildActiveRoundSnapshot(room, currentPlayerId)
     }
 
@@ -675,6 +701,46 @@ export class RoomsService {
     }
   }
 
+  private buildRoundSummarySnapshot(room: LiveRoom, currentPlayerId: string): RoundSummaryRoomSnapshot {
+    const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
+
+    if (!room.activePvpRound || room.activePvpRound.state.status !== 'completed' || !room.activePvpRound.state.completedAt) {
+      throw new Error(`The room ${room.roomCode} does not have a completed PVP round.`)
+    }
+
+    const scoreboard = this.buildScoreboard(room)
+    const timer = this.buildCompletedTimerState(room.activePvpRound)
+    const placements = this.buildPvpRoundPlacements(room, scoreboard)
+    const summaryAutoAdvanceAt = new Date(
+      Date.parse(room.activePvpRound.state.completedAt) + room.settings.roundSummaryAutoAdvanceSeconds * 1000,
+    ).toISOString()
+
+    return {
+      roomCode: room.roomCode,
+      status: 'in_game',
+      viewState: 'round_summary',
+      settings: room.settings,
+      hostPlayerId: room.hostPlayerId,
+      players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+      currentPlayerId,
+      minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+      canCurrentPlayerStartMatch: false,
+      createdAt: room.createdAt,
+      currentRoundNumber: room.currentRoundNumber,
+      totalRounds: room.settings.totalRounds,
+      summary: {
+        mode: 'pvp',
+        secretWord: room.activePvpRound.state.secretWord,
+        timer,
+        placements,
+        scoreboard,
+      },
+      canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
+      summaryAutoAdvanceAt,
+      chatMessages: [],
+    }
+  }
+
   private buildScoreboard(room: LiveRoom): ScoreEntry[] {
     const placementsByPlayerId = new Map(
       room.activePvpRound?.state.players.map((player) => [player.playerId, player.finishPlacement]) ?? [],
@@ -706,6 +772,41 @@ export class RoomsService {
       })
   }
 
+  private buildPvpRoundPlacements(room: LiveRoom, scoreboard: ScoreEntry[]): PvpRoundPlacement[] {
+    if (!room.activePvpRound) {
+      return []
+    }
+
+    const scoresByPlayerId = new Map(scoreboard.map((entry) => [entry.playerId, entry]))
+
+    return room.activePvpRound.state.players
+      .map((player) => ({
+        playerId: player.playerId,
+        nickname: player.nickname,
+        placement: player.finishPlacement,
+        solved: player.solved,
+        roundPoints: player.solved && player.finishPlacement !== null
+          ? this.calculatePvpRoundPoints(player.finishPlacement)
+          : 0,
+        totalPoints: scoresByPlayerId.get(player.playerId)?.totalPoints ?? 0,
+      }))
+      .sort((left, right) => {
+        if (left.placement !== null && right.placement !== null) {
+          return left.placement - right.placement
+        }
+
+        if (left.placement !== null) {
+          return -1
+        }
+
+        if (right.placement !== null) {
+          return 1
+        }
+
+        return left.nickname.localeCompare(right.nickname)
+      })
+  }
+
   private applyPvpScoreUpdates(
     room: LiveRoom,
     previousRoundState: EnginePvpRoundState,
@@ -730,6 +831,35 @@ export class RoomsService {
 
   private calculatePvpRoundPoints(finishPlacement: number): number {
     return PVP_BASE_POINTS + (PVP_PLACEMENT_BONUSES[finishPlacement] ?? 0)
+  }
+
+  private expirePvpTimerIfNeeded(room: LiveRoom, now = new Date()): boolean {
+    if (
+      room.status !== 'in_game'
+      || !room.activePvpRound
+      || room.activePvpRound.state.status !== 'active'
+      || room.activePvpRound.timerEndsAt === null
+    ) {
+      return false
+    }
+
+    if (new Date(room.activePvpRound.timerEndsAt).getTime() > now.getTime()) {
+      return false
+    }
+
+    room.activePvpRound.state = this.roundStateService.completePvpRound(room.activePvpRound.state, now.toISOString())
+    this.touchRoom(room)
+    return true
+  }
+
+  private buildCompletedTimerState(activeRound: LivePvpRound): TimerState {
+    const completedAt = activeRound.state.completedAt
+
+    if (completedAt) {
+      return this.buildTimerState(activeRound, new Date(completedAt))
+    }
+
+    return this.buildTimerState(activeRound)
   }
 
   private buildTimerState(activeRound: LivePvpRound, now = new Date()): TimerState {

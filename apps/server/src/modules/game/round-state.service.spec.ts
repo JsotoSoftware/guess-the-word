@@ -103,6 +103,25 @@ test('no permite seguir jugando una ronda PVP completada', () => {
   assert.throws(() => service.applyPvpGuess(completedRound, 'p1', 'queso'), RoundAlreadyCompletedError)
 })
 
+test('puede cerrar una ronda PVP activa por temporizador y marca finishedAt en los pendientes', () => {
+  const round = service.createPvpRoundState(
+    'queso',
+    [
+      { playerId: 'p1', nickname: 'Ana' },
+      { playerId: 'p2', nickname: 'Luis' },
+    ],
+    3,
+  )
+
+  const afterSolve = service.applyPvpGuess(round, 'p1', 'queso', '2026-01-01T00:04:00.000Z')
+  const completedRound = service.completePvpRound(afterSolve, '2026-01-01T00:04:30.000Z')
+
+  assert.equal(completedRound.status, 'completed')
+  assert.equal(completedRound.completedAt, '2026-01-01T00:04:30.000Z')
+  assert.equal(completedRound.players.find((player) => player.playerId === 'p1')?.finishedAt, '2026-01-01T00:04:00.000Z')
+  assert.equal(completedRound.players.find((player) => player.playerId === 'p2')?.finishedAt, '2026-01-01T00:04:30.000Z')
+})
+
 test('crea una ronda cooperativa con intentos compartidos', () => {
   const round = service.createCoopRoundState('bosque', 4, '2026-01-01T00:05:00.000Z')
 

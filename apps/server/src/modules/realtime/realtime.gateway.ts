@@ -43,6 +43,7 @@ interface PongPayload {
 }
 
 const ROOM_IDLE_CLEANUP_INTERVAL_MS = 30_000
+const PVP_TIMER_TICK_INTERVAL_MS = 1_000
 
 @WebSocketGateway({
   cors: {
@@ -57,6 +58,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   server!: Server
 
   private idleCleanupInterval: NodeJS.Timeout | null = null
+  private pvpTimerInterval: NodeJS.Timeout | null = null
 
   constructor(
     private readonly config: AppConfigService,
@@ -71,12 +73,25 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         this.emitRoomClosed(closedRoom)
       }
     }, ROOM_IDLE_CLEANUP_INTERVAL_MS)
+
+    this.pvpTimerInterval = setInterval(() => {
+      const updatedRoomCodes = this.roomsService.expireElapsedPvpRounds()
+
+      for (const roomCode of updatedRoomCodes) {
+        this.emitRoomState(roomCode)
+      }
+    }, PVP_TIMER_TICK_INTERVAL_MS)
   }
 
   onModuleDestroy(): void {
     if (this.idleCleanupInterval) {
       clearInterval(this.idleCleanupInterval)
       this.idleCleanupInterval = null
+    }
+
+    if (this.pvpTimerInterval) {
+      clearInterval(this.pvpTimerInterval)
+      this.pvpTimerInterval = null
     }
   }
 

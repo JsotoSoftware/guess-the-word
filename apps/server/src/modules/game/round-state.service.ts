@@ -155,6 +155,28 @@ export class RoundStateService {
     }
   }
 
+  completePvpRound(round: PvpRoundState, completedAt = new Date().toISOString()): PvpRoundState {
+    if (round.status !== 'active') {
+      return round
+    }
+
+    return {
+      ...round,
+      status: 'completed',
+      completedAt,
+      players: round.players.map((player) => {
+        if (player.finishedAt !== null) {
+          return player
+        }
+
+        return {
+          ...player,
+          finishedAt: completedAt,
+        }
+      }),
+    }
+  }
+
   applyCoopGuess(round: CoopRoundState, guess: string, submittedByPlayerId: string, submittedAt = new Date().toISOString()): CoopRoundState {
     this.ensureCoopRoundIsActive(round)
 

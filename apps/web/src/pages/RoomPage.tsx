@@ -4,6 +4,7 @@ import {
   type LetterResult,
   type LobbyRoomSnapshot,
   type RoomSettings,
+  type RoundSummaryRoomSnapshot,
 } from '@guess-the-word/shared'
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -162,6 +163,14 @@ export function RoomPage() {
     return room as ActiveRoundRoomSnapshot
   }, [normalizedCode, room])
 
+  const summaryRoom = useMemo(() => {
+    if (!room || room.roomCode !== normalizedCode || room.viewState !== 'round_summary') {
+      return null
+    }
+
+    return room as RoundSummaryRoomSnapshot
+  }, [normalizedCode, room])
+
   const [settingsForm, setSettingsForm] = useState<LobbySettingsFormState | null>(
     lobbyRoom ? toSettingsFormState(lobbyRoom.settings) : null,
   )
@@ -179,7 +188,7 @@ export function RoomPage() {
     }
   }, [clearClosedRoomCode, closedRoomCode, navigate, normalizedCode])
 
-  const currentRoomPlayer = (lobbyRoom ?? activeRoom)?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const currentRoomPlayer = (lobbyRoom ?? activeRoom ?? summaryRoom)?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const isHost = currentRoomPlayer?.isHost ?? false
 
   const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
@@ -203,7 +212,7 @@ export function RoomPage() {
   }, [pvpRound])
 
   useEffect(() => {
-    if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
+    if ((!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) && !summaryRoom) {
       return
     }
 
@@ -212,7 +221,7 @@ export function RoomPage() {
     }, 1000)
 
     return () => window.clearInterval(interval)
-  }, [pvpRound])
+  }, [pvpRound, summaryRoom])
 
   useEffect(() => {
     if (!pvpRound || !activeRoundPlayer) {
@@ -462,7 +471,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.3</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.4</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -600,6 +609,84 @@ export function RoomPage() {
     )
   }
 
+  if (summaryRoom && summaryRoom.summary.mode === 'pvp') {
+    const summaryCountdownSeconds = Math.max(
+      Math.ceil((new Date(summaryRoom.summaryAutoAdvanceAt).getTime() - clockNow) / 1000),
+      0,
+    )
+
+    return (
+      <div className="space-y-8">
+        <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen de ronda PVP · fase 4.4</p>
+            <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
+            <p className="mt-3 max-w-2xl text-slate-300">
+              La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-200">
+              Autoavance: {formatRemainingSeconds(summaryCountdownSeconds)}
+            </span>
+            <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-slate-200">
+              Temporizador final: {formatRemainingSeconds(summaryRoom.summary.timer.remainingSeconds)}
+            </span>
+            <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+              {connected ? 'Conectado' : 'Reconectando'}
+            </span>
+          </div>
+        </section>
+
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+          <SectionCard title="Placements de la ronda" description="El orden se decide por el orden de recepción del servidor y ya no cambia.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {summaryRoom.summary.placements.map((placement, index) => (
+                <div key={placement.playerId} className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-white">#{index + 1} · {placement.nickname}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">
+                        {placement.placement === null ? 'No resolvió a tiempo' : `Puesto ${placement.placement}`}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Ronda: {placement.roundPoints}</span>
+                      <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Total: {placement.totalPoints}</span>
+                    </div>
+                  </div>
+                  {placement.solved ? <p className="mt-2 text-emerald-300">Resolvió la palabra.</p> : <p className="mt-2 text-rose-300">No consiguió resolverla antes del cierre.</p>}
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Scoreboard acumulado" description="La puntuación base y los bonos por 1.º, 2.º y 3.º lugar ya quedaron aplicados.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {summaryRoom.summary.scoreboard.map((scoreEntry, index) => (
+                <div key={scoreEntry.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div>
+                    <p className="font-medium text-white">#{index + 1} · {scoreEntry.nickname}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                      {scoreEntry.currentPlacement === null ? 'Sin placement en esta ronda' : `Placement actual: ${scoreEntry.currentPlacement}`}
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{scoreEntry.totalPoints} pts</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
+          {summaryRoom.canCurrentPlayerAdvanceSummary
+            ? 'La continuación manual y el siguiente round llegan en la fase 7. Por ahora ya puedes validar el payload de resumen y el cierre limpio de la ronda.'
+            : 'Esperando la siguiente fase para continuar manual o automáticamente hacia la siguiente ronda.'}
+        </div>
+      </div>
+    )
+  }
+
   if (!lobbyRoom) {
     return (
       <div className="space-y-6">
@@ -625,7 +712,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.3</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.4</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
