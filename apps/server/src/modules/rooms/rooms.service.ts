@@ -6,11 +6,13 @@ import {
   type CreateRoomResponse,
   type GameMode,
   type JoinRoomResponse,
+  type LeaveRoomResponse,
   type LobbyRoomSnapshot,
   type PlayerConnectionState,
   type PlayerSummary,
   type RoomSettings,
   type RoomStatus,
+  type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
 
@@ -64,6 +66,24 @@ export class NicknameTakenError extends RoomActionError {
   }
 }
 
+export class NotHostError extends RoomActionError {
+  constructor() {
+    super('NOT_HOST', 'Solo el anfitrión puede ejecutar esta acción.')
+  }
+}
+
+export class PlayerNotInRoomError extends RoomActionError {
+  constructor(roomCode: string) {
+    super('PLAYER_NOT_IN_ROOM', `El jugador actual no pertenece a la sala ${roomCode}.`, { roomCode })
+  }
+}
+
+export class RoomNotInLobbyError extends RoomActionError {
+  constructor(roomCode: string) {
+    super('UNAUTHORIZED_ACTION', `La sala ${roomCode} ya no está en estado de lobby.`, { roomCode })
+  }
+}
+
 interface LivePlayer {
   playerId: string
   nickname: string
@@ -95,9 +115,30 @@ interface JoinRoomInput {
   socketId: string
 }
 
+interface UpdateRoomSettingsInput {
+  roomCode: string
+  socketId: string
+  settings: RoomSettings
+}
+
+interface LeaveRoomInput {
+  roomCode: string
+  socketId: string
+}
+
 interface RoomStateTarget {
   socketId: string
   room: LobbyRoomSnapshot
+}
+
+interface LeaveRoomResult {
+  response: LeaveRoomResponse
+  roomStillExists: boolean
+}
+
+interface RoomMembershipResult {
+  roomCode: string
+  roomStillExists: boolean
 }
 
 @Injectable()
@@ -138,11 +179,7 @@ export class RoomsService {
 
   joinRoom(input: JoinRoomInput): JoinRoomResponse {
     const roomCode = input.roomCode.trim().toUpperCase()
-    const room = this.rooms.get(roomCode)
-
-    if (!room) {
-      throw new RoomNotFoundError(roomCode)
-    }
+    const room = this.getRoomOrThrow(roomCode)
 
     if (room.status !== 'lobby') {
       throw new RoomClosedError(roomCode)
@@ -175,9 +212,53 @@ export class RoomsService {
     }
   }
 
+  updateRoomSettings(input: UpdateRoomSettingsInput): UpdateRoomSettingsResponse {
+    const room = this.getRoomOrThrow(input.roomCode)
+    this.ensureRoomIsLobby(room)
+
+    const player = this.getPlayerBySocketId(room, input.socketId)
+
+    if (player.playerId !== room.hostPlayerId) {
+      throw new NotHostError()
+    }
+
+    room.settings = this.normalizeSettings(input.settings)
+
+    return {
+      room: this.buildLobbySnapshot(room, player.playerId),
+    }
+  }
+
+  leaveRoom(input: LeaveRoomInput): LeaveRoomResult {
+    const room = this.getRoomOrThrow(input.roomCode)
+    const result = this.removePlayerFromRoom(room, input.socketId)
+
+    return {
+      response: {
+        roomCode: room.roomCode,
+        leftAt: new Date().toISOString(),
+      },
+      roomStillExists: result.roomStillExists,
+    }
+  }
+
+  disconnectSocket(socketId: string): RoomMembershipResult | null {
+    const room = this.findRoomBySocketId(socketId)
+
+    if (!room) {
+      return null
+    }
+
+    return this.removePlayerFromRoom(room, socketId)
+  }
+
   closeRoom(roomCode: string): void {
     const room = this.getRoomOrThrow(roomCode)
     room.status = 'closed'
+  }
+
+  hasRoom(roomCode: string): boolean {
+    return this.rooms.has(roomCode.trim().toUpperCase())
   }
 
   getRoomStateTargets(roomCode: string): RoomStateTarget[] {
@@ -189,6 +270,16 @@ export class RoomsService {
     }))
   }
 
+  private findRoomBySocketId(socketId: string): LiveRoom | null {
+    for (const room of this.rooms.values()) {
+      if (room.players.some((player) => player.socketId === socketId)) {
+        return room
+      }
+    }
+
+    return null
+  }
+
   private getRoomOrThrow(roomCode: string): LiveRoom {
     const normalizedRoomCode = roomCode.trim().toUpperCase()
     const room = this.rooms.get(normalizedRoomCode)
@@ -198,6 +289,54 @@ export class RoomsService {
     }
 
     return room
+  }
+
+  private removePlayerFromRoom(room: LiveRoom, socketId: string): RoomMembershipResult {
+    const playerIndex = room.players.findIndex((player) => player.socketId === socketId)
+
+    if (playerIndex === -1) {
+      throw new PlayerNotInRoomError(room.roomCode)
+    }
+
+    room.players.splice(playerIndex, 1)
+
+    if (room.players.length === 0) {
+      this.rooms.delete(room.roomCode)
+
+      return {
+        roomCode: room.roomCode,
+        roomStillExists: false,
+      }
+    }
+
+    if (!room.players.some((player) => player.playerId === room.hostPlayerId)) {
+      room.hostPlayerId = room.players[0].playerId
+      room.players = room.players.map((player, index) => ({
+        ...player,
+        isHost: index === 0,
+      }))
+    }
+
+    return {
+      roomCode: room.roomCode,
+      roomStillExists: true,
+    }
+  }
+
+  private getPlayerBySocketId(room: LiveRoom, socketId: string): LivePlayer {
+    const player = room.players.find((candidate) => candidate.socketId === socketId)
+
+    if (!player) {
+      throw new PlayerNotInRoomError(room.roomCode)
+    }
+
+    return player
+  }
+
+  private ensureRoomIsLobby(room: LiveRoom): void {
+    if (room.status !== 'lobby') {
+      throw new RoomNotInLobbyError(room.roomCode)
+    }
   }
 
   private createLivePlayer(input: {
@@ -223,7 +362,7 @@ export class RoomsService {
     const currentPlayer = room.players.find((player) => player.playerId === currentPlayerId)
 
     if (!currentPlayer) {
-      throw new RoomNotFoundError(room.roomCode)
+      throw new PlayerNotInRoomError(room.roomCode)
     }
 
     return {
@@ -235,7 +374,7 @@ export class RoomsService {
       players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
       currentPlayerId,
       minPlayersRequired,
-      canCurrentPlayerStartMatch: currentPlayer.isHost && room.players.length >= minPlayersRequired,
+      canCurrentPlayerStartMatch: currentPlayer.playerId === room.hostPlayerId && room.players.length >= minPlayersRequired,
       createdAt: room.createdAt,
       currentRoundNumber: 0,
       chatMessages: [],

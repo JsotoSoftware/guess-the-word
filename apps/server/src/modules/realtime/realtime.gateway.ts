@@ -16,6 +16,10 @@ import {
   type CreateRoomResponse,
   type JoinRoomRequest,
   type JoinRoomResponse,
+  type LeaveRoomRequest,
+  type LeaveRoomResponse,
+  type UpdateRoomSettingsRequest,
+  type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
 import { Server, Socket } from 'socket.io'
 import { AppConfigService } from '../../config/app-config.service'
@@ -58,6 +62,12 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   handleDisconnect(client: Socket): void {
     this.logger.log(`Socket disconnected: ${client.id}`)
+
+    const roomResult = this.roomsService.disconnectSocket(client.id)
+
+    if (roomResult?.roomStillExists) {
+      this.emitRoomState(roomResult.roomCode)
+    }
   }
 
   @SubscribeMessage(SOCKET_EVENTS.clientPing)
@@ -124,7 +134,62 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     }
   }
 
+  @SubscribeMessage(SOCKET_EVENTS.roomUpdateSettings)
+  handleUpdateRoomSettings(
+    @MessageBody() payload: UpdateRoomSettingsRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<UpdateRoomSettingsResponse> {
+    try {
+      const response = this.roomsService.updateRoomSettings({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+        settings: payload.settings,
+      })
+
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`room:update_settings failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.roomLeave)
+  handleLeaveRoom(
+    @MessageBody() payload: LeaveRoomRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<LeaveRoomResponse> {
+    try {
+      const result = this.roomsService.leaveRoom({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+      })
+
+      void client.leave(payload.roomCode)
+
+      if (result.roomStillExists) {
+        this.emitRoomState(payload.roomCode)
+      }
+
+      return {
+        ok: true,
+        data: result.response,
+      }
+    } catch (error) {
+      this.logger.warn(`room:leave failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
   private emitRoomState(roomCode: string): void {
+    if (!this.roomsService.hasRoom(roomCode)) {
+      return
+    }
+
     const targets = this.roomsService.getRoomStateTargets(roomCode)
 
     for (const target of targets) {

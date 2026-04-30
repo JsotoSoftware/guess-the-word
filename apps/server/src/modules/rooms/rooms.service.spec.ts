@@ -1,7 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { RoomsService, RoomClosedError, RoomNotFoundError } from './rooms.service'
 import { DEFAULT_ROOM_SETTINGS } from '@guess-the-word/shared'
+import {
+  NotHostError,
+  RoomClosedError,
+  RoomNotFoundError,
+  RoomsService,
+} from './rooms.service'
 
 test('genera códigos de sala únicos en un uso normal', () => {
   const service = new RoomsService()
@@ -85,4 +90,194 @@ test('rechaza unirse a una sala cerrada', () => {
     () => service.joinRoom({ roomCode: createdRoom.room.roomCode, nickname: 'Luis', socketId: 'socket-guest' }),
     RoomClosedError,
   )
+})
+
+test('sincroniza cambios de configuración para todos los jugadores del lobby', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  service.updateRoomSettings({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      submissionMode: 'manual_submit',
+      pvpTimerSeconds: 120,
+      maxPlayers: 5,
+    },
+  })
+
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+
+  assert.equal(targets.length, 2)
+  assert.equal(targets.every((target) => target.room.settings.mode === 'coop'), true)
+  assert.equal(targets.every((target) => target.room.settings.submissionMode === 'manual_submit'), true)
+  assert.equal(targets.every((target) => target.room.settings.pvpTimerSeconds === null), true)
+})
+
+test('solo el host puede cambiar la configuración del lobby', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  assert.throws(
+    () => service.updateRoomSettings({
+      roomCode: createdRoom.room.roomCode,
+      socketId: 'socket-guest',
+      settings: {
+        ...DEFAULT_ROOM_SETTINGS,
+        submissionMode: 'manual_submit',
+      },
+    }),
+    NotHostError,
+  )
+})
+
+test('la salida de un jugador actualiza la lista y transfiere el host si hace falta', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest-1',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Marta',
+    socketId: 'socket-guest-2',
+  })
+
+  service.leaveRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+
+  assert.equal(targets.length, 2)
+  assert.equal(targets.every((target) => target.room.players.length === 2), true)
+  assert.equal(targets.every((target) => target.room.hostPlayerId === targets[0].room.players[0].playerId), true)
+  assert.equal(targets[0].room.players[0].isHost, true)
+})
+
+test('en PVP el host no puede iniciar con menos de 2 jugadores', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(createdRoom.room.minPlayersRequired, 2)
+  assert.equal(createdRoom.room.canCurrentPlayerStartMatch, false)
+})
+
+test('en cooperativo el host sí puede iniciar con un solo jugador', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(createdRoom.room.minPlayersRequired, 1)
+  assert.equal(createdRoom.room.canCurrentPlayerStartMatch, true)
+})
+
+test('cerrar la pestaña elimina al jugador de la sala igual que salir manualmente', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const disconnectResult = service.disconnectSocket('socket-guest')
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+
+  assert.ok(disconnectResult)
+  assert.equal(disconnectResult.roomStillExists, true)
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].room.players.length, 1)
+  assert.equal(targets[0].room.players[0].nickname, 'Ana')
+})
+
+test('si el socket desconectado era el host, la sala transfiere el host restante', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const disconnectResult = service.disconnectSocket('socket-host')
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+
+  assert.ok(disconnectResult)
+  assert.equal(disconnectResult.roomStillExists, true)
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].room.hostPlayerId, targets[0].room.players[0].playerId)
+  assert.equal(targets[0].room.players[0].nickname, 'Luis')
+  assert.equal(targets[0].room.players[0].isHost, true)
+})
+
+
+test('si se cierra la última pestaña, la sala se elimina', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  const disconnectResult = service.disconnectSocket('socket-host')
+
+  assert.ok(disconnectResult)
+  assert.equal(disconnectResult.roomStillExists, false)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
 })

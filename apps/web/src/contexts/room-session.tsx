@@ -15,8 +15,12 @@ import {
   type CreateRoomResponse,
   type JoinRoomRequest,
   type JoinRoomResponse,
+  type LeaveRoomRequest,
+  type LeaveRoomResponse,
   type RoomSnapshot,
   type RoomStateEvent,
+  type UpdateRoomSettingsRequest,
+  type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
 import { io, type Socket } from 'socket.io-client'
 import { env } from '../lib/env'
@@ -28,6 +32,8 @@ interface RoomSessionContextValue {
   resumeToken: string | null
   createRoom: (payload: CreateRoomRequest) => Promise<CreateRoomResponse>
   joinRoom: (payload: JoinRoomRequest) => Promise<JoinRoomResponse>
+  updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
+  leaveRoom: (payload: LeaveRoomRequest) => Promise<LeaveRoomResponse>
 }
 
 const RoomSessionContext = createContext<RoomSessionContextValue | undefined>(undefined)
@@ -127,6 +133,28 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const updateRoomSettings = useCallback(async (payload: UpdateRoomSettingsRequest) => {
+    try {
+      const response = await emitWithAck<UpdateRoomSettingsResponse, UpdateRoomSettingsRequest>(SOCKET_EVENTS.roomUpdateSettings, payload)
+      setRoom(response.room)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
+  const leaveRoom = useCallback(async (payload: LeaveRoomRequest) => {
+    try {
+      const response = await emitWithAck<LeaveRoomResponse, LeaveRoomRequest>(SOCKET_EVENTS.roomLeave, payload)
+      setRoom(null)
+      setCurrentPlayerId(null)
+      setResumeToken(null)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
   const value = useMemo<RoomSessionContextValue>(() => ({
     connected,
     room,
@@ -134,7 +162,9 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     resumeToken,
     createRoom,
     joinRoom,
-  }), [connected, room, currentPlayerId, resumeToken, createRoom, joinRoom])
+    updateRoomSettings,
+    leaveRoom,
+  }), [connected, room, currentPlayerId, resumeToken, createRoom, joinRoom, updateRoomSettings, leaveRoom])
 
   return <RoomSessionContext.Provider value={value}>{children}</RoomSessionContext.Provider>
 }
