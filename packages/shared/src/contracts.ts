@@ -116,6 +116,8 @@ export interface CoopActiveRoundState {
   status: 'active' | RoundOutcome
   attemptsLeft: number
   totalAttempts: number
+  roundsWon: number
+  roundsLost: number
   guessHistory: GuessRecord[]
 }
 

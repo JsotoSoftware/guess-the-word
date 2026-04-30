@@ -770,6 +770,8 @@ export class RoomsService {
           status: room.activeCoopRound.status,
           attemptsLeft: room.activeCoopRound.attemptsLeft,
           totalAttempts: room.activeCoopRound.totalAttempts,
+          roundsWon: room.roundsWon,
+          roundsLost: room.roundsLost,
           guessHistory: room.activeCoopRound.guessHistory.map((guessRecord) => ({ ...guessRecord })),
         },
         chatMessages: [],

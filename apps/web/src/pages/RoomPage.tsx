@@ -633,7 +633,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.3</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.4</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -682,6 +682,29 @@ export function RoomPage() {
                 <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Intentos compartidos: {coopRound.attemptsLeft}/{coopRound.totalAttempts}</span>
                 <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Envío: {formatSubmissionMode(coopRound.submissionMode)}</span>
                 <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Estado: {coopRound.status}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Score PVP: oculto</span>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
+                  <p className="text-slate-500">Progreso del equipo</p>
+                  <p className="mt-1 font-medium text-white">Ganadas: {coopRound.roundsWon}</p>
+                  <p className="mt-1 font-medium text-white">Perdidas: {coopRound.roundsLost}</p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
+                  <p className="text-slate-500">Modo de envío</p>
+                  <p className="mt-1 font-medium text-white">{formatSubmissionMode(coopRound.submissionMode)}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {coopRound.submissionMode === 'auto_send'
+                      ? 'La fila completa se envía sola.'
+                      : 'La fila completa requiere el botón de envío.'}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
+                  <p className="text-slate-500">Objetivo del modo</p>
+                  <p className="mt-1 font-medium text-white">Resolver juntos sin ranking</p>
+                  <p className="mt-1 text-xs text-slate-500">Cada error consume un intento compartido.</p>
+                </div>
               </div>
 
               <div className="rounded-[28px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)]">
@@ -778,7 +801,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 5.3</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 5.4</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
@@ -809,6 +832,7 @@ export function RoomPage() {
               <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                 <p>Rondas ganadas: <span className="font-medium text-white">{summaryRoom.summary.roundsWon}</span></p>
                 <p className="mt-2">Rondas perdidas: <span className="font-medium text-white">{summaryRoom.summary.roundsLost}</span></p>
+                <p className="mt-2 text-slate-500">Score PVP: no aplica en modo cooperativo.</p>
               </div>
             </div>
           </SectionCard>
@@ -937,7 +961,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.3</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.4</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}

@@ -295,6 +295,8 @@ test('el host puede iniciar una ronda cooperativa con un solo jugador', async ()
   assert.equal(response.room.round.wordLength, 6)
   assert.equal(response.room.round.attemptsLeft, 4)
   assert.equal(response.room.round.totalAttempts, 4)
+  assert.equal(response.room.round.roundsWon, 0)
+  assert.equal(response.room.round.roundsLost, 0)
   assert.equal(response.room.round.guessHistory.length, 0)
   assert.equal(response.room.round.status, 'active')
 })
@@ -340,6 +342,8 @@ test('en cooperativo todos comparten el mismo contador de intentos y el mismo hi
     }
 
     assert.equal(snapshot.round.attemptsLeft, 2)
+    assert.equal(snapshot.round.roundsWon, 0)
+    assert.equal(snapshot.round.roundsLost, 0)
     assert.equal(snapshot.round.guessHistory.length, 1)
     assert.equal(snapshot.round.guessHistory[0].guess, 'frutas')
     assert.equal(snapshot.round.guessHistory[0].submittedByPlayerId, createdRoom.playerId)
