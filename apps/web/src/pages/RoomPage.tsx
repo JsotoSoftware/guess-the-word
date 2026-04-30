@@ -1,11 +1,13 @@
 import {
   type ActiveRoundRoomSnapshot,
   type GuessSubmissionMode,
+  type LetterResult,
   type LobbyRoomSnapshot,
   type RoomSettings,
 } from '@guess-the-word/shared'
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { LetterBox } from '../components/game/LetterBox'
 import { SectionCard } from '../components/ui/SectionCard'
 import { useRoomSession } from '../contexts/room-session'
 
@@ -90,6 +92,34 @@ function formatRemainingSeconds(seconds: number | null): string {
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
 }
 
+function createEmptyLetters(length: number): string[] {
+  return Array.from({ length }, () => '')
+}
+
+function sanitizeLetter(value: string): string {
+  const lettersOnly = Array.from(value).filter((character) => /\p{L}/u.test(character))
+  const lastLetter = lettersOnly[lettersOnly.length - 1] ?? ''
+  return lastLetter.toLowerCase()
+}
+
+function buildBoardMessage(hasAutoSend: boolean, canSubmit: boolean, isSolved: boolean, outOfAttempts: boolean): string {
+  if (isSolved) {
+    return 'Ya resolviste la palabra de esta ronda.'
+  }
+
+  if (outOfAttempts) {
+    return 'Te quedaste sin intentos para esta ronda.'
+  }
+
+  if (!canSubmit) {
+    return 'La ronda ya no acepta más guesses.'
+  }
+
+  return hasAutoSend
+    ? 'Completa la fila y el guess se enviará automáticamente.'
+    : 'Completa la fila y presiona el botón para enviar el guess.'
+}
+
 export function RoomPage() {
   const navigate = useNavigate()
   const { code = '' } = useParams()
@@ -100,6 +130,7 @@ export function RoomPage() {
     closedRoomCode,
     updateRoomSettings,
     startMatch,
+    submitGuess,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
@@ -109,10 +140,10 @@ export function RoomPage() {
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isStartingMatch, setIsStartingMatch] = useState(false)
+  const [isSubmittingGuess, setIsSubmittingGuess] = useState(false)
   const [isLeavingRoom, setIsLeavingRoom] = useState(false)
   const [isClosingRoom, setIsClosingRoom] = useState(false)
   const [clockNow, setClockNow] = useState(() => Date.now())
-
   const normalizedCode = code.toUpperCase()
 
   const lobbyRoom = useMemo(() => {
@@ -152,6 +183,24 @@ export function RoomPage() {
   const isHost = currentRoomPlayer?.isHost ?? false
 
   const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
+  const activeRoundPlayer = pvpRound?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([])
+  const [letters, setLetters] = useState<string[]>(() => createEmptyLetters(pvpRound?.wordLength ?? 0))
+
+  useEffect(() => {
+    if (!pvpRound) {
+      setLetters([])
+      return
+    }
+
+    setLetters((currentLetters) => {
+      if (currentLetters.length === pvpRound.wordLength) {
+        return currentLetters
+      }
+
+      return createEmptyLetters(pvpRound.wordLength)
+    })
+  }, [pvpRound])
 
   useEffect(() => {
     if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
@@ -165,7 +214,15 @@ export function RoomPage() {
     return () => window.clearInterval(interval)
   }, [pvpRound])
 
-  const activeRoundPlayer = pvpRound?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  useEffect(() => {
+    if (!pvpRound || !activeRoundPlayer) {
+      return
+    }
+
+    setLetters(createEmptyLetters(pvpRound.wordLength))
+    setIsSubmittingGuess(false)
+    requestAnimationFrame(() => inputRefs.current[0]?.focus())
+  }, [activeRoundPlayer?.guessHistory.length, activeRoundPlayer?.attemptsLeft, activeRoundPlayer?.solved, activeRoundPlayer?.outOfAttempts, pvpRound])
 
   const activeTimerLabel = useMemo(() => {
     if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
@@ -179,6 +236,19 @@ export function RoomPage() {
 
     return formatRemainingSeconds(remainingSeconds)
   }, [clockNow, pvpRound])
+
+  const canSubmitGuess = Boolean(pvpRound && activeRoundPlayer && !activeRoundPlayer.solved && !activeRoundPlayer.outOfAttempts)
+  const isAutoSend = pvpRound?.submissionMode === 'auto_send'
+  const isRowComplete = letters.length > 0 && letters.every((letter) => letter.length === 1)
+  const boardMessage = buildBoardMessage(Boolean(isAutoSend), canSubmitGuess, Boolean(activeRoundPlayer?.solved), Boolean(activeRoundPlayer?.outOfAttempts))
+
+  useEffect(() => {
+    if (!isAutoSend || !isRowComplete || !canSubmitGuess || isSubmittingGuess || !activeRoom) {
+      return
+    }
+
+    void handleSubmitGuess(true)
+  }, [activeRoom, canSubmitGuess, isAutoSend, isRowComplete, isSubmittingGuess])
 
   const handleCopyRoomCode = async () => {
     const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
@@ -265,6 +335,29 @@ export function RoomPage() {
     }
   }
 
+  async function handleSubmitGuess(triggeredAutomatically = false) {
+    if (!activeRoom || !canSubmitGuess || !isRowComplete || isSubmittingGuess) {
+      return
+    }
+
+    setActionMessage(null)
+    setIsSubmittingGuess(true)
+
+    try {
+      await submitGuess({
+        roomCode: activeRoom.roomCode,
+        guess: letters.join(''),
+      })
+
+      if (!triggeredAutomatically) {
+        setActionMessage('Guess enviado correctamente.')
+      }
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo enviar el guess.')
+      setIsSubmittingGuess(false)
+    }
+  }
+
   const handleLeaveRoom = async () => {
     const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode
 
@@ -304,12 +397,72 @@ export function RoomPage() {
     }
   }
 
+  const focusInput = (index: number) => {
+    const input = inputRefs.current[index]
+    input?.focus()
+    input?.select()
+  }
+
+  const updateLetterAt = (index: number, rawValue: string) => {
+    if (!canSubmitGuess || !pvpRound) {
+      return
+    }
+
+    const nextLetter = sanitizeLetter(rawValue)
+
+    setLetters((currentLetters) => {
+      const nextLetters = [...currentLetters]
+      nextLetters[index] = nextLetter
+      return nextLetters
+    })
+
+    if (nextLetter && index < pvpRound.wordLength - 1) {
+      requestAnimationFrame(() => focusInput(index + 1))
+    }
+  }
+
+  const handleBoardKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
+    if (!pvpRound) {
+      return
+    }
+
+    if (event.key === 'Backspace' && !letters[index] && index > 0) {
+      requestAnimationFrame(() => focusInput(index - 1))
+      return
+    }
+
+    if (event.key === 'ArrowLeft' && index > 0) {
+      event.preventDefault()
+      focusInput(index - 1)
+      return
+    }
+
+    if (event.key === 'ArrowRight' && index < pvpRound.wordLength - 1) {
+      event.preventDefault()
+      focusInput(index + 1)
+      return
+    }
+
+    if (event.key === 'Enter' && !isAutoSend) {
+      event.preventDefault()
+      void handleSubmitGuess(false)
+    }
+  }
+
+  const renderGuessRow = (guess: string, lettersResult: LetterResult[]) => (
+    <div key={`${guess}-${lettersResult.map((entry) => entry.feedback).join('-')}`} className="flex flex-wrap gap-2.5">
+      {lettersResult.map((letter, index) => (
+        <LetterBox key={`${guess}-${index}`} value={letter.letter} feedback={letter.feedback} disabled />
+      ))}
+    </div>
+  )
+
   if (activeRoom && pvpRound) {
     return (
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -350,32 +503,72 @@ export function RoomPage() {
         {copyFeedback ? <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{copyFeedback}</div> : null}
         {actionMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{actionMessage}</div> : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
-          <SectionCard title="Resumen de la ronda" description="Todos los clientes deben entrar sincronizados a la misma ronda PVP.">
-            <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
-                <p className="text-slate-500">Longitud de la palabra</p>
-                <p className="mt-1 font-medium text-white">{pvpRound.wordLength} letras</p>
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.9fr)]">
+          <SectionCard title="Tu tablero" description="Cada jugador avanza de forma independiente dentro de la misma ronda PVP.">
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Letras: {pvpRound.wordLength}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Tus intentos: {activeRoundPlayer?.attemptsLeft ?? activeRoom.settings.attemptsPerRound}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Envío: {formatSubmissionMode(pvpRound.submissionMode)}</span>
+                <span className="rounded-full border border-white/10 bg-slate-950/60 px-4 py-2">Temporizador: {activeTimerLabel}</span>
               </div>
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
-                <p className="text-slate-500">Modo de envío</p>
-                <p className="mt-1 font-medium text-white">{formatSubmissionMode(pvpRound.submissionMode)}</p>
+
+              <div className="rounded-[28px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)]">
+                <div className="rounded-[22px] border-[4px] border-[#3048a8] bg-[#88b7ff] p-3 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)]">
+                  <div className="space-y-2.5">
+                    {activeRoundPlayer?.guessHistory.map((guessRecord) => renderGuessRow(guessRecord.guess, guessRecord.result))}
+
+                    {canSubmitGuess ? (
+                      <div className="flex flex-wrap gap-2.5">
+                        {letters.map((letter, index) => (
+                          <LetterBox
+                            key={`active-${index}`}
+                            value={letter}
+                            autoFocus={index === 0 && (activeRoundPlayer?.guessHistory.length ?? 0) === 0}
+                            ref={(element) => {
+                              inputRefs.current[index] = element
+                            }}
+                            onChange={(value) => updateLetterAt(index, value)}
+                            onKeyDown={(event) => handleBoardKeyDown(index, event)}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {Array.from({
+                      length: Math.max(
+                        activeRoom.settings.attemptsPerRound - (activeRoundPlayer?.guessHistory.length ?? 0) - (canSubmitGuess ? 1 : 0),
+                        0,
+                      ),
+                    }).map((_, rowIndex) => (
+                      <div key={`empty-${rowIndex}`} className="flex flex-wrap gap-2.5 opacity-80">
+                        {Array.from({ length: pvpRound.wordLength }).map((__, index) => (
+                          <LetterBox key={`empty-${rowIndex}-${index}`} value="" disabled />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
-                <p className="text-slate-500">Temporizador</p>
-                <p className="mt-1 font-medium text-white">{activeTimerLabel}</p>
+
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitGuess(false)}
+                  disabled={!canSubmitGuess || isAutoSend || !isRowComplete || isSubmittingGuess}
+                  className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                >
+                  {isSubmittingGuess ? 'Enviando...' : 'Enviar guess'}
+                </button>
               </div>
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
-                <p className="text-slate-500">Tus intentos</p>
-                <p className="mt-1 font-medium text-white">{activeRoundPlayer?.attemptsLeft ?? activeRoom.settings.attemptsPerRound}</p>
+
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
+                {boardMessage}
               </div>
-            </div>
-            <div className="mt-4 rounded-2xl border border-dashed border-white/10 bg-slate-950/40 px-4 py-3 text-sm text-slate-400">
-              La captura y envío de guesses por jugador continúa en la fase 4.2. Esta pantalla valida el arranque sincronizado de la ronda, el tamaño del tablero y el temporizador opcional.
             </div>
           </SectionCard>
 
-          <SectionCard title="Marcador inicial" description="Cada jugador arranca con sus propios intentos y el score parte en cero.">
+          <SectionCard title="Estado del room" description="Los guesses y los intentos deben mantenerse aislados por jugador.">
             <div className="space-y-3 text-sm text-slate-300">
               {pvpRound.players.map((player) => {
                 const scoreEntry = pvpRound.scoreboard.find((entry) => entry.playerId === player.playerId)
@@ -389,7 +582,9 @@ export function RoomPage() {
                         <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Puntos: {scoreEntry?.totalPoints ?? 0}</span>
                       </div>
                     </div>
-                    <p className="mt-2 text-slate-500">Historial de guesses: {player.guessHistory.length}</p>
+                    <p className="mt-2 text-slate-500">Guesses enviados: {player.guessHistory.length}</p>
+                    {player.solved ? <p className="mt-2 text-emerald-300">Ya resolvió la palabra.</p> : null}
+                    {player.outOfAttempts ? <p className="mt-2 text-rose-300">Se quedó sin intentos.</p> : null}
                   </div>
                 )
               })}
@@ -425,7 +620,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.1</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 4.2</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}

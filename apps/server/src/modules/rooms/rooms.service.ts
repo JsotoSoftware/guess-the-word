@@ -18,11 +18,18 @@ import {
   type RoomStatus,
   type ScoreEntry,
   type StartMatchResponse,
+  type SubmitGuessResponse,
   type TimerState,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { RoundStateService, type PvpRoundState as EnginePvpRoundState } from '../game/round-state.service'
+import {
+  PlayerAlreadyFinishedError,
+  RoundAlreadyCompletedError,
+  RoundStateService,
+  type PvpRoundState as EnginePvpRoundState,
+} from '../game/round-state.service'
+import { InvalidGuessLengthError } from '../game/guess-evaluator'
 import { WordsService } from '../words/words.service'
 
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -100,6 +107,28 @@ export class StartNotAllowedError extends RoomActionError {
   }
 }
 
+export class GuessAlreadySubmittedError extends RoomActionError {
+  constructor(guess: string) {
+    super('GUESS_ALREADY_SUBMITTED', `La palabra ${guess.toUpperCase()} ya fue enviada por este jugador en la ronda actual.`, { guess })
+  }
+}
+
+export class RoundNotActiveError extends RoomActionError {
+  constructor() {
+    super('ROUND_NOT_ACTIVE', 'La ronda actual ya no acepta más jugadas.')
+  }
+}
+
+export class InvalidGuessLengthAppError extends RoomActionError {
+  constructor(expectedLength: number, receivedLength: number) {
+    super(
+      'INVALID_GUESS_LENGTH',
+      `La palabra enviada debe tener ${expectedLength} letras, pero recibió ${receivedLength}.`,
+      { expectedLength, receivedLength },
+    )
+  }
+}
+
 interface LivePlayer {
   playerId: string
   nickname: string
@@ -149,6 +178,12 @@ interface UpdateRoomSettingsInput {
 interface StartMatchInput {
   roomCode: string
   socketId: string
+}
+
+interface SubmitGuessInput {
+  roomCode: string
+  socketId: string
+  guess: string
 }
 
 interface CloseRoomInput {
@@ -330,6 +365,48 @@ export class RoomsService {
 
     return {
       room: this.buildActiveRoundSnapshot(room, player.playerId),
+    }
+  }
+
+  submitGuess(input: SubmitGuessInput): SubmitGuessResponse {
+    const room = this.getRoomOrThrow(input.roomCode)
+
+    if (room.status !== 'in_game' || !room.activePvpRound) {
+      throw new RoundNotActiveError()
+    }
+
+    const player = this.getPlayerBySocketId(room, input.socketId)
+    const normalizedGuess = input.guess.trim().toLowerCase()
+
+    if (
+      room.activePvpRound.state.players
+        .find((roundPlayer) => roundPlayer.playerId === player.playerId)
+        ?.guessHistory.some((guessRecord) => guessRecord.guess === normalizedGuess)
+    ) {
+      throw new GuessAlreadySubmittedError(normalizedGuess)
+    }
+
+    try {
+      room.activePvpRound.state = this.roundStateService.applyPvpGuess(
+        room.activePvpRound.state,
+        player.playerId,
+        normalizedGuess,
+      )
+      this.touchRoom(room)
+
+      return {
+        accepted: true,
+      }
+    } catch (error) {
+      if (error instanceof InvalidGuessLengthError) {
+        throw new InvalidGuessLengthAppError(room.activePvpRound.state.wordLength, normalizedGuess.length)
+      }
+
+      if (error instanceof RoundAlreadyCompletedError || error instanceof PlayerAlreadyFinishedError) {
+        throw new RoundNotActiveError()
+      }
+
+      throw error
     }
   }
 

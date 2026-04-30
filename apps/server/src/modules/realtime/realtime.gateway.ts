@@ -23,6 +23,8 @@ import {
   type RoomClosedEvent,
   type StartMatchRequest,
   type StartMatchResponse,
+  type SubmitGuessRequest,
+  type SubmitGuessResponse,
   type UpdateRoomSettingsRequest,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
@@ -203,6 +205,30 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`room:start_match failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.gameSubmitGuess)
+  handleSubmitGuess(
+    @MessageBody() payload: SubmitGuessRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<SubmitGuessResponse> {
+    try {
+      const response = this.roomsService.submitGuess({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+        guess: payload.guess,
+      })
+
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`game:submit_guess failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

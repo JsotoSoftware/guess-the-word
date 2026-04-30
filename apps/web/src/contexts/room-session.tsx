@@ -24,6 +24,8 @@ import {
   type RoomStateEvent,
   type StartMatchRequest,
   type StartMatchResponse,
+  type SubmitGuessRequest,
+  type SubmitGuessResponse,
   type UpdateRoomSettingsRequest,
   type UpdateRoomSettingsResponse,
 } from '@guess-the-word/shared'
@@ -40,6 +42,7 @@ interface RoomSessionContextValue {
   joinRoom: (payload: JoinRoomRequest) => Promise<JoinRoomResponse>
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
   startMatch: (payload: StartMatchRequest) => Promise<StartMatchResponse>
+  submitGuess: (payload: SubmitGuessRequest) => Promise<SubmitGuessResponse>
   leaveRoom: (payload: LeaveRoomRequest) => Promise<LeaveRoomResponse>
   closeRoom: (payload: CloseRoomRequest) => Promise<CloseRoomResponse>
   clearClosedRoomCode: () => void
@@ -174,6 +177,15 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const submitGuess = useCallback(async (payload: SubmitGuessRequest) => {
+    try {
+      const response = await emitWithAck<SubmitGuessResponse, SubmitGuessRequest>(SOCKET_EVENTS.gameSubmitGuess, payload)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
   const leaveRoom = useCallback(async (payload: LeaveRoomRequest) => {
     try {
       const response = await emitWithAck<LeaveRoomResponse, LeaveRoomRequest>(SOCKET_EVENTS.roomLeave, payload)
@@ -209,6 +221,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     joinRoom,
     updateRoomSettings,
     startMatch,
+    submitGuess,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
@@ -222,6 +235,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     joinRoom,
     updateRoomSettings,
     startMatch,
+    submitGuess,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
