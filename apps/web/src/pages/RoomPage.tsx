@@ -633,7 +633,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -871,7 +871,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.1</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.2</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}

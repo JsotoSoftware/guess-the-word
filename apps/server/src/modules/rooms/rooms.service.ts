@@ -114,7 +114,7 @@ export class StartNotAllowedError extends RoomActionError {
 
 export class GuessAlreadySubmittedError extends RoomActionError {
   constructor(guess: string) {
-    super('GUESS_ALREADY_SUBMITTED', `La palabra ${guess.toUpperCase()} ya fue enviada por este jugador en la ronda actual.`, { guess })
+    super('GUESS_ALREADY_SUBMITTED', `La palabra ${guess.toUpperCase()} ya fue enviada en la ronda actual.`, { guess })
   }
 }
 
@@ -408,6 +408,10 @@ export class RoomsService {
     const normalizedGuess = input.guess.trim().toLowerCase()
 
     if (room.activeCoopRound) {
+      if (room.activeCoopRound.guessHistory.some((guessRecord) => guessRecord.guess === normalizedGuess)) {
+        throw new GuessAlreadySubmittedError(normalizedGuess)
+      }
+
       try {
         room.activeCoopRound = this.roundStateService.applyCoopGuess(
           room.activeCoopRound,

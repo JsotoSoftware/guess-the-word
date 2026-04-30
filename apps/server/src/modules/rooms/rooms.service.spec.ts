@@ -346,6 +346,105 @@ test('en cooperativo todos comparten el mismo contador de intentos y el mismo hi
   }
 })
 
+test('en cooperativo procesa guesses casi simultáneos en orden de recepción del servidor', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      attemptsPerRound: 4,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest',
+    guess: 'frutas',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    guess: 'montes',
+  })
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'coop') {
+    throw new Error('Expected an active Co-op round snapshot.')
+  }
+
+  assert.equal(snapshot.round.attemptsLeft, 2)
+  assert.equal(snapshot.round.guessHistory.length, 2)
+  assert.equal(snapshot.round.guessHistory[0].guess, 'frutas')
+  assert.equal(snapshot.round.guessHistory[0].submittedByPlayerId, snapshot.players.find((player) => player.nickname === 'Luis')?.playerId)
+  assert.equal(snapshot.round.guessHistory[1].guess, 'montes')
+  assert.equal(snapshot.round.guessHistory[1].submittedByPlayerId, createdRoom.playerId)
+})
+
+test('en cooperativo rechaza guesses duplicados del room sin gastar intentos compartidos', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      attemptsPerRound: 3,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    guess: 'frutas',
+  })
+
+  assert.throws(
+    () => service.submitGuess({
+      roomCode: createdRoom.room.roomCode,
+      socketId: 'socket-guest',
+      guess: 'frutas',
+    }),
+    GuessAlreadySubmittedError,
+  )
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'coop') {
+    throw new Error('Expected an active Co-op round snapshot.')
+  }
+
+  assert.equal(snapshot.round.attemptsLeft, 2)
+  assert.equal(snapshot.round.guessHistory.length, 1)
+})
+
 test('en cooperativo una palabra correcta marca la ronda como ganada y bloquea más guesses', async () => {
   const service = createServiceWithWord('bosque')
   const createdRoom = service.createRoom({
