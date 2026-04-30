@@ -21,6 +21,8 @@ import {
   type LeaveRoomRequest,
   type LeaveRoomResponse,
   type RoomClosedEvent,
+  type SendChatMessageRequest,
+  type SendChatMessageResponse,
   type StartMatchRequest,
   type StartMatchResponse,
   type SubmitGuessRequest,
@@ -244,6 +246,33 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`game:submit_guess failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.chatSend)
+  handleSendChatMessage(
+    @MessageBody() payload: SendChatMessageRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<SendChatMessageResponse> {
+    try {
+      const response = this.roomsService.sendChatMessage({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+        text: payload.text,
+      })
+
+      this.server.to(payload.roomCode).emit(SOCKET_EVENTS.chatMessage, {
+        message: response.message,
+      })
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`chat:send failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

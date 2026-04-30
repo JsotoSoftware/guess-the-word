@@ -132,6 +132,7 @@ export function RoomPage() {
     updateRoomSettings,
     startMatch,
     submitGuess,
+    sendChatMessage,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
@@ -142,6 +143,8 @@ export function RoomPage() {
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isStartingMatch, setIsStartingMatch] = useState(false)
   const [isSubmittingGuess, setIsSubmittingGuess] = useState(false)
+  const [chatDraft, setChatDraft] = useState('')
+  const [isSendingChat, setIsSendingChat] = useState(false)
   const [isLeavingRoom, setIsLeavingRoom] = useState(false)
   const [isClosingRoom, setIsClosingRoom] = useState(false)
   const [clockNow, setClockNow] = useState(() => Date.now())
@@ -188,7 +191,9 @@ export function RoomPage() {
     }
   }, [clearClosedRoomCode, closedRoomCode, navigate, normalizedCode])
 
-  const currentRoomPlayer = (lobbyRoom ?? activeRoom ?? summaryRoom)?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const currentVisibleRoom = lobbyRoom ?? activeRoom ?? summaryRoom
+  const currentChatMessages = currentVisibleRoom?.chatMessages ?? []
+  const currentRoomPlayer = currentVisibleRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const isHost = currentRoomPlayer?.isHost ?? false
 
   const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
@@ -386,6 +391,68 @@ export function RoomPage() {
     }
   }
 
+  const handleSendChat = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!currentVisibleRoom || !chatDraft.trim() || isSendingChat) {
+      return
+    }
+
+    setIsSendingChat(true)
+
+    try {
+      await sendChatMessage({
+        roomCode: currentVisibleRoom.roomCode,
+        text: chatDraft,
+      })
+      setChatDraft('')
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo enviar el mensaje.')
+    } finally {
+      setIsSendingChat(false)
+    }
+  }
+
+  const renderChatPanel = (title: string, description: string) => (
+    <SectionCard title={title} description={description}>
+      <div className="space-y-3 text-sm text-slate-300">
+        <div className="min-h-48 rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-slate-400">
+          {currentChatMessages.length > 0 ? (
+            currentChatMessages.map((message) => (
+              <div key={message.messageId} className="mb-3 rounded-2xl border border-white/5 bg-slate-900/70 px-3 py-2 last:mb-0">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-white">{message.senderNickname}</p>
+                  <p className="text-xs text-slate-500">{new Date(message.sentAt).toLocaleTimeString()}</p>
+                </div>
+                <p className="mt-1">{message.text}</p>
+              </div>
+            ))
+          ) : (
+            <p>Aún no hay mensajes en esta sala.</p>
+          )}
+        </div>
+
+        <form className="flex gap-3" onSubmit={handleSendChat}>
+          <input
+            type="text"
+            value={chatDraft}
+            onChange={(event) => setChatDraft(event.target.value)}
+            placeholder="Escribe un mensaje para la sala"
+            maxLength={300}
+            className="flex-1 rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white outline-none transition focus:border-brand-400"
+          />
+          <button
+            type="submit"
+            disabled={isSendingChat || !chatDraft.trim()}
+            className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+          >
+            {isSendingChat ? 'Enviando...' : 'Enviar'}
+          </button>
+        </form>
+      </div>
+    </SectionCard>
+  )
+
   const handleLeaveRoom = async () => {
     const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
 
@@ -490,7 +557,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 4.4</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 6.1</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -624,6 +691,8 @@ export function RoomPage() {
             </div>
           </SectionCard>
         </div>
+
+        {renderChatPanel('Chat de la partida', 'Mensajes en tiempo real visibles para todos los jugadores del room.')}
       </div>
     )
   }
@@ -633,7 +702,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 5.4</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 6.1</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -787,6 +856,8 @@ export function RoomPage() {
             </div>
           </SectionCard>
         </div>
+
+        {renderChatPanel('Chat del equipo', 'Coordinación en tiempo real mientras comparten intentos e historial.')}
       </div>
     )
   }
@@ -961,7 +1032,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 5.4</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 6.1</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
@@ -1182,25 +1253,7 @@ export function RoomPage() {
           )}
         </SectionCard>
 
-        <SectionCard title="Chat del lobby" description="La visibilidad del panel queda lista aunque la mensajería real llega en la fase 6.">
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="min-h-48 rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-slate-400">
-              {lobbyRoom.chatMessages && lobbyRoom.chatMessages.length > 0 ? (
-                lobbyRoom.chatMessages.map((message) => (
-                  <div key={message.messageId} className="mb-3 rounded-2xl border border-white/5 bg-slate-900/70 px-3 py-2">
-                    <p className="font-medium text-white">{message.senderNickname}</p>
-                    <p className="mt-1">{message.text}</p>
-                  </div>
-                ))
-              ) : (
-                <p>Aún no hay mensajes en el lobby. El envío y sincronización de chat se implementan en la fase 6.</p>
-              )}
-            </div>
-            <div className="rounded-2xl border border-dashed border-white/10 bg-slate-950/40 px-4 py-3 text-slate-500">
-              Ready-check no requerido para el MVP actual; el host inicia manualmente cuando corresponda.
-            </div>
-          </div>
-        </SectionCard>
+        {renderChatPanel('Chat del lobby', 'Mensajes en tiempo real visibles para todos los jugadores de la sala.')}
       </div>
     </div>
   )

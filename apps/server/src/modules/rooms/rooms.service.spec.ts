@@ -193,6 +193,72 @@ test('solo el host puede cambiar la configuración del lobby', () => {
   )
 })
 
+test('el chat de sala guarda remitente, texto y timestamp en el snapshot del room', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = service.sendChatMessage({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-guest',
+    text: ' Hola equipo ',
+  })
+
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+
+  assert.equal(response.message.roomCode, createdRoom.room.roomCode)
+  assert.equal(response.message.senderNickname, 'Luis')
+  assert.equal(response.message.text, 'Hola equipo')
+  assert.ok(response.message.sentAt)
+  assert.equal(targets.every((target) => (target.room.chatMessages?.length ?? 0) === 1), true)
+  assert.equal(targets.every((target) => target.room.chatMessages?.[0].senderNickname === 'Luis'), true)
+})
+
+test('el chat permanece aislado por sala y rechaza mensajes vacíos', () => {
+  const service = new RoomsService()
+  const firstRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host-1',
+  })
+  const secondRoom = service.createRoom({
+    nickname: 'Marta',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host-2',
+  })
+
+  service.sendChatMessage({
+    roomCode: firstRoom.room.roomCode,
+    socketId: 'socket-host-1',
+    text: 'Mensaje sala 1',
+  })
+
+  assert.throws(
+    () => service.sendChatMessage({
+      roomCode: firstRoom.room.roomCode,
+      socketId: 'socket-host-1',
+      text: '   ',
+    }),
+    (error) => error instanceof Error && 'code' in error && error.code === 'INVALID_CHAT_MESSAGE',
+  )
+
+  const firstRoomTargets = service.getRoomStateTargets(firstRoom.room.roomCode)
+  const secondRoomTargets = service.getRoomStateTargets(secondRoom.room.roomCode)
+
+  assert.equal(firstRoomTargets[0].room.chatMessages?.length, 1)
+  assert.equal(firstRoomTargets[0].room.chatMessages?.[0].text, 'Mensaje sala 1')
+  assert.equal(secondRoomTargets[0].room.chatMessages?.length ?? 0, 0)
+})
+
 test('la salida de un jugador actualiza la lista y transfiere el host si hace falta', () => {
   const service = new RoomsService()
   const createdRoom = service.createRoom({

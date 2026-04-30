@@ -11,6 +11,7 @@ import {
 import {
   SOCKET_EVENTS,
   type Ack,
+  type ChatMessageEvent,
   type CloseRoomRequest,
   type CloseRoomResponse,
   type CreateRoomRequest,
@@ -22,6 +23,8 @@ import {
   type RoomClosedEvent,
   type RoomSnapshot,
   type RoomStateEvent,
+  type SendChatMessageRequest,
+  type SendChatMessageResponse,
   type StartMatchRequest,
   type StartMatchResponse,
   type SubmitGuessRequest,
@@ -43,6 +46,7 @@ interface RoomSessionContextValue {
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
   startMatch: (payload: StartMatchRequest) => Promise<StartMatchResponse>
   submitGuess: (payload: SubmitGuessRequest) => Promise<SubmitGuessResponse>
+  sendChatMessage: (payload: SendChatMessageRequest) => Promise<SendChatMessageResponse>
   leaveRoom: (payload: LeaveRoomRequest) => Promise<LeaveRoomResponse>
   closeRoom: (payload: CloseRoomRequest) => Promise<CloseRoomResponse>
   clearClosedRoomCode: () => void
@@ -83,11 +87,30 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setResumeToken(null)
       setClosedRoomCode(event.roomCode)
     }
+    const handleChatMessage = (event: ChatMessageEvent) => {
+      setRoom((currentRoom) => {
+        if (!currentRoom || currentRoom.roomCode !== event.message.roomCode) {
+          return currentRoom
+        }
+
+        const currentMessages = currentRoom.chatMessages ?? []
+
+        if (currentMessages.some((message) => message.messageId === event.message.messageId)) {
+          return currentRoom
+        }
+
+        return {
+          ...currentRoom,
+          chatMessages: [...currentMessages, event.message],
+        }
+      })
+    }
 
     socket.on('connect', handleConnect)
     socket.on('disconnect', handleDisconnect)
     socket.on(SOCKET_EVENTS.roomState, handleRoomState)
     socket.on(SOCKET_EVENTS.roomClosed, handleRoomClosed)
+    socket.on(SOCKET_EVENTS.chatMessage, handleChatMessage)
 
     setConnected(socket.connected)
 
@@ -96,6 +119,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       socket.off('disconnect', handleDisconnect)
       socket.off(SOCKET_EVENTS.roomState, handleRoomState)
       socket.off(SOCKET_EVENTS.roomClosed, handleRoomClosed)
+      socket.off(SOCKET_EVENTS.chatMessage, handleChatMessage)
       socket.disconnect()
       socketRef.current = null
     }
@@ -186,6 +210,15 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const sendChatMessage = useCallback(async (payload: SendChatMessageRequest) => {
+    try {
+      const response = await emitWithAck<SendChatMessageResponse, SendChatMessageRequest>(SOCKET_EVENTS.chatSend, payload)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
   const leaveRoom = useCallback(async (payload: LeaveRoomRequest) => {
     try {
       const response = await emitWithAck<LeaveRoomResponse, LeaveRoomRequest>(SOCKET_EVENTS.roomLeave, payload)
@@ -222,6 +255,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     updateRoomSettings,
     startMatch,
     submitGuess,
+    sendChatMessage,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,
@@ -236,6 +270,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     updateRoomSettings,
     startMatch,
     submitGuess,
+    sendChatMessage,
     leaveRoom,
     closeRoom,
     clearClosedRoomCode,

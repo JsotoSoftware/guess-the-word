@@ -6,6 +6,7 @@ import {
   PVP_PLACEMENT_BONUSES,
   ROOM_CODE_LENGTH,
   type ActiveRoundRoomSnapshot,
+  type ChatMessage,
   type CloseRoomResponse,
   type CreateRoomResponse,
   type GameMode,
@@ -19,6 +20,7 @@ import {
   type RoomSettings,
   type RoomSnapshot,
   type RoomStatus,
+  type SendChatMessageResponse,
   type RoundSummaryRoomSnapshot,
   type ScoreEntry,
   type StartMatchResponse,
@@ -134,6 +136,12 @@ export class InvalidGuessLengthAppError extends RoomActionError {
   }
 }
 
+export class InvalidChatMessageError extends RoomActionError {
+  constructor() {
+    super('INVALID_CHAT_MESSAGE', 'Debes escribir un mensaje antes de enviarlo.')
+  }
+}
+
 interface LivePlayer {
   playerId: string
   nickname: string
@@ -159,6 +167,7 @@ interface LiveRoom {
   scoreboard: ScoreEntry[]
   roundsWon: number
   roundsLost: number
+  chatMessages: ChatMessage[]
   createdAt: string
   lastActivityAt: string
   currentRoundNumber: number
@@ -193,6 +202,12 @@ interface SubmitGuessInput {
   roomCode: string
   socketId: string
   guess: string
+}
+
+interface SendChatInput {
+  roomCode: string
+  socketId: string
+  text: string
 }
 
 interface CloseRoomInput {
@@ -257,6 +272,7 @@ export class RoomsService {
       ],
       roundsWon: 0,
       roundsLost: 0,
+      chatMessages: [],
       createdAt,
       lastActivityAt: createdAt,
       currentRoundNumber: 0,
@@ -483,6 +499,29 @@ export class RoomsService {
       }
 
       throw error
+    }
+  }
+
+  sendChatMessage(input: SendChatInput): SendChatMessageResponse {
+    const room = this.getRoomOrThrow(input.roomCode)
+    const player = this.getPlayerBySocketId(room, input.socketId)
+    const text = this.normalizeChatText(input.text)
+
+    const message: ChatMessage = {
+      messageId: randomUUID(),
+      roomCode: room.roomCode,
+      scope: 'room',
+      senderPlayerId: player.playerId,
+      senderNickname: player.nickname,
+      text,
+      sentAt: new Date().toISOString(),
+    }
+
+    room.chatMessages.push(message)
+    this.touchRoom(room)
+
+    return {
+      message,
     }
   }
 
@@ -713,7 +752,7 @@ export class RoomsService {
       canCurrentPlayerStartMatch: currentPlayer.playerId === room.hostPlayerId && room.players.length >= minPlayersRequired,
       createdAt: room.createdAt,
       currentRoundNumber: 0,
-      chatMessages: [],
+      chatMessages: room.chatMessages.map((message) => ({ ...message })),
     }
   }
 
@@ -745,7 +784,7 @@ export class RoomsService {
           scoreboard,
           players: room.activePvpRound.state.players.map((player) => ({ ...player })),
         },
-        chatMessages: [],
+        chatMessages: room.chatMessages.map((message) => ({ ...message })),
       }
     }
 
@@ -774,7 +813,7 @@ export class RoomsService {
           roundsLost: room.roundsLost,
           guessHistory: room.activeCoopRound.guessHistory.map((guessRecord) => ({ ...guessRecord })),
         },
-        chatMessages: [],
+        chatMessages: room.chatMessages.map((message) => ({ ...message })),
       }
     }
 
@@ -817,7 +856,7 @@ export class RoomsService {
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
-      chatMessages: [],
+      chatMessages: room.chatMessages.map((message) => ({ ...message })),
     }
   }
 
@@ -855,7 +894,7 @@ export class RoomsService {
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
-      chatMessages: [],
+      chatMessages: room.chatMessages.map((message) => ({ ...message })),
     }
   }
 
@@ -1050,6 +1089,16 @@ export class RoomsService {
     }
 
     return normalizedNickname.slice(0, 24)
+  }
+
+  private normalizeChatText(text: string): string {
+    const normalizedText = text.trim()
+
+    if (!normalizedText) {
+      throw new InvalidChatMessageError()
+    }
+
+    return normalizedText.slice(0, 300)
   }
 
   private normalizeSettings(settings: RoomSettings): RoomSettings {
