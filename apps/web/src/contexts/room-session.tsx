@@ -22,6 +22,8 @@ import {
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type RematchRequest,
+  type RematchResponse,
   type ResumeSessionRequest,
   type ResumeSessionResponse,
   type RoomClosedEvent,
@@ -50,6 +52,7 @@ interface RoomSessionContextValue {
   resumeSession: (payload: ResumeSessionRequest) => Promise<ResumeSessionResponse>
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
   continueRound: (payload: ContinueRoundRequest) => Promise<ContinueRoundResponse>
+  rematch: (payload: RematchRequest) => Promise<RematchResponse>
   startMatch: (payload: StartMatchRequest) => Promise<StartMatchResponse>
   submitGuess: (payload: SubmitGuessRequest) => Promise<SubmitGuessResponse>
   sendChatMessage: (payload: SendChatMessageRequest) => Promise<SendChatMessageResponse>
@@ -340,6 +343,16 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const rematch = useCallback(async (payload: RematchRequest) => {
+    try {
+      const response = await emitWithAck<RematchResponse, RematchRequest>(SOCKET_EVENTS.roomRematch, payload)
+      setRoom(response.room)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
   const submitGuess = useCallback(async (payload: SubmitGuessRequest) => {
     try {
       const response = await emitWithAck<SubmitGuessResponse, SubmitGuessRequest>(SOCKET_EVENTS.gameSubmitGuess, payload)
@@ -378,6 +391,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setRoom(null)
       setCurrentPlayerId(null)
       setResumeToken(null)
+      setClosedRoomCode(response.roomCode)
       return response
     } catch (error) {
       throw new Error(extractErrorMessage(error))
@@ -400,6 +414,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     updateRoomSettings,
     startMatch,
     continueRound,
+    rematch,
     submitGuess,
     sendChatMessage,
     leaveRoom,
@@ -417,6 +432,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     updateRoomSettings,
     startMatch,
     continueRound,
+    rematch,
     submitGuess,
     sendChatMessage,
     leaveRoom,

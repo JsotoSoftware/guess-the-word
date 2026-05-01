@@ -15,6 +15,7 @@ import {
   type JoinRoomResponse,
   type LeaveRoomResponse,
   type LobbyRoomSnapshot,
+  type RematchResponse,
   type PvpRoundPlacement,
   type PlayerConnectionState,
   type PlayerSummary,
@@ -152,6 +153,12 @@ export class RoundSummaryNotActiveError extends RoomActionError {
   }
 }
 
+export class RematchNotAllowedError extends RoomActionError {
+  constructor(roomCode: string) {
+    super('UNAUTHORIZED_ACTION', `La sala ${roomCode} todavía no puede iniciar una revancha.`, { roomCode })
+  }
+}
+
 export class ReconnectExpiredError extends RoomActionError {
   constructor(roomCode: string) {
     super('RECONNECT_EXPIRED', `La sesión para volver a la sala ${roomCode} ya expiró o no es válida.`, { roomCode })
@@ -215,6 +222,11 @@ interface StartMatchInput {
 }
 
 interface ContinueRoundInput {
+  roomCode: string
+  socketId: string
+}
+
+interface RematchInput {
   roomCode: string
   socketId: string
 }
@@ -472,6 +484,38 @@ export class RoomsService {
 
     return {
       room: this.buildActiveRoundSnapshot(room, player.playerId),
+    }
+  }
+
+  rematch(input: RematchInput): RematchResponse {
+    const room = this.getRoomOrThrow(input.roomCode)
+    const player = this.getPlayerBySocketId(room, input.socketId)
+
+    if (player.playerId !== room.hostPlayerId) {
+      throw new NotHostError()
+    }
+
+    if (room.status !== 'match_finished') {
+      throw new RematchNotAllowedError(room.roomCode)
+    }
+
+    room.status = 'lobby'
+    room.currentRoundNumber = 0
+    room.activePvpRound = null
+    room.activeCoopRound = null
+    room.roundsWon = 0
+    room.roundsLost = 0
+    room.scoreboard = room.scoreboard
+      .map((entry) => ({
+        ...entry,
+        totalPoints: 0,
+        currentPlacement: null,
+      }))
+      .sort((left, right) => left.nickname.localeCompare(right.nickname))
+    this.touchRoom(room)
+
+    return {
+      room: this.buildLobbySnapshot(room, player.playerId),
     }
   }
 

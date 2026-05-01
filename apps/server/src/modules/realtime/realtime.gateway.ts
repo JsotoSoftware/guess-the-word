@@ -22,6 +22,8 @@ import {
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type RematchRequest,
+  type RematchResponse,
   type ResumeSessionRequest,
   type ResumeSessionResponse,
   type RoomClosedEvent,
@@ -309,6 +311,29 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`round:continue failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.roomRematch)
+  handleRematch(
+    @MessageBody() payload: RematchRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<RematchResponse> {
+    try {
+      const response = this.roomsService.rematch({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+      })
+
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`room:rematch failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

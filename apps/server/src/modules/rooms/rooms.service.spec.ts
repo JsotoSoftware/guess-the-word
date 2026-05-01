@@ -136,6 +136,162 @@ test('el host puede cerrar la sala y se elimina de la memoria activa', () => {
   assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
 })
 
+test('el host puede cerrar la sala desde una ronda activa', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 2,
+      attemptsPerRound: 2,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  const response = service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+test('el host puede cerrar la sala desde el summary de ronda', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 2,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'perro' })
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0]?.room
+  assert.equal(snapshot?.viewState, 'round_summary')
+
+  const response = service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+test('el host puede cerrar la sala desde resultados finales', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 1,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'perro' })
+  await service.continueRound({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  const finalSnapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0]?.room
+  assert.equal(finalSnapshot?.viewState, 'final_results')
+
+  const response = service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+test('después de una revancha el host todavía puede cerrar la sala', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 1,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'perro' })
+  await service.continueRound({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  const rematchResponse = service.rematch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  assert.equal(rematchResponse.room.viewState, 'lobby')
+
+  const response = service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.roomCode, createdRoom.room.roomCode)
+  assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
 
 test('el chat se borra al cerrar la sala y no reaparece si el código se reutiliza', () => {
   const service = new RoomsService()
@@ -1278,6 +1434,79 @@ test('el autoavance del último summary también lleva a resultados finales dent
 
   assert.equal(snapshot.finalResults.roundsWon, 1)
   assert.equal(snapshot.finalResults.roundsLost, 0)
+})
+
+test('la revancha devuelve la sala al lobby y reinicia el estado acumulado sin perder jugadores', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 1,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({ roomCode: createdRoom.room.roomCode, nickname: 'Luis', socketId: 'socket-guest' })
+  await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'perro' })
+  await service.continueRound({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  const rematchResponse = service.rematch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  assert.equal(rematchResponse.room.viewState, 'lobby')
+  assert.equal(rematchResponse.room.currentRoundNumber, 0)
+  assert.equal(rematchResponse.room.players.length, 2)
+  assert.equal(rematchResponse.room.canCurrentPlayerStartMatch, true)
+
+  const restartedMatch = await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  assert.equal(restartedMatch.room.viewState, 'round_active')
+  assert.equal(restartedMatch.room.round.mode, 'pvp')
+  assert.equal(restartedMatch.room.round.scoreboard.every((entry) => entry.totalPoints === 0), true)
+  assert.equal(restartedMatch.room.round.players.every((player) => player.guessHistory.length === 0), true)
+})
+
+test('solo el host puede pedir revancha y el cooperativo reinicia roundsWon/roundsLost', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      totalRounds: 1,
+      attemptsPerRound: 2,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({ roomCode: createdRoom.room.roomCode, nickname: 'Luis', socketId: 'socket-guest' })
+  await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'bosque' })
+  await service.continueRound({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  assert.throws(
+    () => service.rematch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest' }),
+    NotHostError,
+  )
+
+  service.rematch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  const restartedMatch = await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  assert.equal(restartedMatch.room.round.mode, 'coop')
+
+  if (restartedMatch.room.round.mode !== 'coop') {
+    throw new Error('Expected an active Co-op round snapshot.')
+  }
+
+  assert.equal(restartedMatch.room.round.roundsWon, 0)
+  assert.equal(restartedMatch.room.round.roundsLost, 0)
+  assert.equal(restartedMatch.room.round.guessHistory.length, 0)
 })
 
 test('la expiración del temporizador cierra la ronda PVP y rechaza guesses tardíos', async () => {

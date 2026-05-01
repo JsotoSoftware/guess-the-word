@@ -159,6 +159,7 @@ export function RoomPage() {
     updateRoomSettings,
     startMatch,
     continueRound,
+    rematch,
     submitGuess,
     sendChatMessage,
     leaveRoom,
@@ -171,6 +172,7 @@ export function RoomPage() {
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isStartingMatch, setIsStartingMatch] = useState(false)
   const [isContinuingRound, setIsContinuingRound] = useState(false)
+  const [isRequestingRematch, setIsRequestingRematch] = useState(false)
   const [isSubmittingGuess, setIsSubmittingGuess] = useState(false)
   const [chatDraft, setChatDraft] = useState('')
   const [isSendingChat, setIsSendingChat] = useState(false)
@@ -229,6 +231,7 @@ export function RoomPage() {
   }, [clearClosedRoomCode, closedRoomCode, navigate, normalizedCode])
 
   const currentVisibleRoom = lobbyRoom ?? activeRoom ?? summaryRoom ?? finalResultsRoom
+  const currentRoomCode = currentVisibleRoom?.roomCode ?? null
   const currentChatMessages = currentVisibleRoom?.chatMessages ?? []
   const currentRoomPlayer = currentVisibleRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
@@ -337,11 +340,11 @@ export function RoomPage() {
   }, [activeRoom, canSubmitGuess, isAutoSend, isRowComplete, isSubmittingGuess])
 
   const handleCopyRoomCode = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
-
-    if (!roomCode) {
+    if (!currentRoomCode) {
       return
     }
+
+    const roomCode = currentRoomCode
 
     try {
       await navigator.clipboard.writeText(roomCode)
@@ -430,6 +433,23 @@ export function RoomPage() {
       setActionMessage(error instanceof Error ? error.message : 'No se pudo continuar hacia la siguiente ronda.')
     } finally {
       setIsContinuingRound(false)
+    }
+  }
+
+  const handleRematch = async () => {
+    if (!finalResultsRoom) {
+      return
+    }
+
+    setActionMessage(null)
+    setIsRequestingRematch(true)
+
+    try {
+      await rematch({ roomCode: finalResultsRoom.roomCode })
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo preparar la revancha.')
+    } finally {
+      setIsRequestingRematch(false)
     }
   }
 
@@ -522,11 +542,11 @@ export function RoomPage() {
   )
 
   const handleLeaveRoom = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
-
-    if (!roomCode) {
+    if (!currentRoomCode) {
       return
     }
+
+    const roomCode = currentRoomCode
 
     setActionMessage(null)
     setSettingsError(null)
@@ -542,11 +562,11 @@ export function RoomPage() {
   }
 
   const handleCloseRoom = async () => {
-    const roomCode = lobbyRoom?.roomCode ?? activeRoom?.roomCode ?? summaryRoom?.roomCode
-
-    if (!roomCode) {
+    if (!currentRoomCode) {
       return
     }
+
+    const roomCode = currentRoomCode
 
     setActionMessage(null)
     setSettingsError(null)
@@ -1121,7 +1141,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resultados finales · fase 7.2</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resultados finales · fase 7.3</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {finalResultsRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La partida terminó después de {finalResultsRoom.totalRounds} rondas y el resultado final permanece dentro del flujo de la sala.
@@ -1135,6 +1155,16 @@ export function RoomPage() {
             >
               Copiar código
             </button>
+            {isFinalRoomHost ? (
+              <button
+                type="button"
+                onClick={handleRematch}
+                disabled={isRequestingRematch}
+                className="rounded-full bg-brand-500 px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+              >
+                {isRequestingRematch ? 'Preparando revancha...' : 'Revancha'}
+              </button>
+            ) : null}
             {isFinalRoomHost ? (
               <button
                 type="button"
