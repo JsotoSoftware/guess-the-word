@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { WordsRepository } from './words.repository'
-import type { SecretWordFilters } from './words.types'
+import type { SecretWordFilters, WordActivityState } from './words.types'
 
 @Injectable()
 export class WordsService {
@@ -28,6 +28,20 @@ export class WordsService {
 
     if (!word) {
       throw new NotFoundException('No se encontró una palabra activa para los filtros solicitados.')
+    }
+
+    return word
+  }
+
+  async listWords(filters: SecretWordFilters, activityState: WordActivityState = 'all') {
+    return this.wordsRepository.listWords(filters, activityState)
+  }
+
+  async setWordActiveState(wordId: string, isActive: boolean) {
+    const word = await this.wordsRepository.setWordActiveStateById(wordId, isActive)
+
+    if (!word) {
+      throw new NotFoundException(`No existe una palabra con el id ${wordId}.`)
     }
 
     return word

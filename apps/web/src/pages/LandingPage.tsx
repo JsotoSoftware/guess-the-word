@@ -171,6 +171,9 @@ export function LandingPage() {
           <Link className="rounded-full border border-white/10 px-5 py-3 font-medium text-slate-200 transition hover:border-white/30 hover:text-white" to="/demo/tablero">
             Ver tablero local
           </Link>
+          <Link className="rounded-full border border-white/10 px-5 py-3 font-medium text-slate-200 transition hover:border-white/30 hover:text-white" to="/admin/words">
+            Administrar palabras
+          </Link>
         </div>
       </section>
 

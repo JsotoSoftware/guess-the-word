@@ -1,12 +1,16 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common'
+import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from '@nestjs/common'
 import { WordsService } from './words.service'
-import type { AvailableWordLength, SecretWordFilters, WordRecord } from './words.types'
+import type { AvailableWordLength, SecretWordFilters, WordActivityState, WordRecord } from './words.types'
 
 interface WordsSummaryResponse {
   filters: SecretWordFilters
   activeWordCount: number
   availableLengths: AvailableWordLength[]
   sample: WordRecord | null
+}
+
+interface SetWordActivationRequest {
+  isActive: boolean
 }
 
 @Controller('words')
@@ -44,6 +48,44 @@ export class WordsController {
     }
 
     return filters
+  }
+
+  private parseActivityState(activity?: string): WordActivityState {
+    if (!activity) {
+      return 'all'
+    }
+
+    if (activity === 'active' || activity === 'inactive' || activity === 'all') {
+      return activity
+    }
+
+    throw new BadRequestException('El parámetro activity debe ser active, inactive o all.')
+  }
+
+  @Get()
+  listWords(
+    @Query('length') length?: string,
+    @Query('language') language?: string,
+    @Query('difficulty') difficulty?: string,
+    @Query('category') category?: string,
+    @Query('activity') activity?: string,
+  ): Promise<WordRecord[]> {
+    return this.wordsService.listWords(
+      this.parseFilters({ length, language, difficulty, category }),
+      this.parseActivityState(activity),
+    )
+  }
+
+  @Patch(':wordId/activation')
+  setWordActivation(
+    @Param('wordId') wordId: string,
+    @Body() body: SetWordActivationRequest,
+  ): Promise<WordRecord> {
+    if (typeof body?.isActive !== 'boolean') {
+      throw new BadRequestException('El campo isActive debe ser booleano.')
+    }
+
+    return this.wordsService.setWordActiveState(wordId, body.isActive)
   }
 
   @Get('summary')

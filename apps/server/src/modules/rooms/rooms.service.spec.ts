@@ -623,7 +623,7 @@ test('en cooperativo todos comparten el mismo contador de intentos y el mismo hi
   const snapshots = service.getRoomStateTargets(createdRoom.room.roomCode).map((target) => target.room)
 
   assert.equal(snapshots.every((snapshot) => snapshot.viewState === 'round_active'), true)
-  assert.equal(snapshots.every((snapshot) => snapshot.round.mode === 'coop'), true)
+  assert.equal(snapshots.every((snapshot) => snapshot.viewState === 'round_active' && snapshot.round.mode === 'coop'), true)
 
   for (const snapshot of snapshots) {
     if (snapshot.viewState !== 'round_active' || snapshot.round.mode !== 'coop') {

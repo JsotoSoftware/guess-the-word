@@ -10,7 +10,10 @@
     "test:unit": "tsx --test src/modules/**/*.spec.ts src/modules/**/*.service.spec.ts",
     "db:migrate": "tsx scripts/db-migrate.ts",
     "db:seed": "tsx scripts/db-seed.ts",
-    "db:check": "tsx scripts/db-check.ts"
+    "db:check": "tsx scripts/db-check.ts",
+    "words:import": "tsx scripts/words-import.ts",
+    "words:activate": "tsx scripts/words-set-active.ts --active true",
+    "words:deactivate": "tsx scripts/words-set-active.ts --active false"
   },
   "dependencies": {
     "@guess-the-word/shared": "0.1.0",

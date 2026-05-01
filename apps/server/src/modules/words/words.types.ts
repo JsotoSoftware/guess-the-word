@@ -16,6 +16,17 @@ export interface SecretWordFilters {
   category?: string
 }
 
+export type WordActivityState = 'active' | 'inactive' | 'all'
+
+export interface WordImportRecord {
+  word: string
+  language: string
+  difficulty: string | null
+  category: string | null
+  length: number
+  isActive: boolean
+}
+
 export interface AvailableWordLength {
   length: number
   count: number
