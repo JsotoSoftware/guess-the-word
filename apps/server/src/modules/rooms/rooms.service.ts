@@ -167,7 +167,6 @@ interface LiveRoom {
   scoreboard: ScoreEntry[]
   roundsWon: number
   roundsLost: number
-  chatMessages: ChatMessage[]
   createdAt: string
   lastActivityAt: string
   currentRoundNumber: number
@@ -238,6 +237,7 @@ interface RoomMembershipResult {
 @Injectable()
 export class RoomsService {
   private readonly rooms = new Map<string, LiveRoom>()
+  private readonly roomChatMessages = new Map<string, ChatMessage[]>()
   private readonly roundStateService = new RoundStateService()
 
   constructor(private readonly wordsService?: WordsService) {}
@@ -272,7 +272,6 @@ export class RoomsService {
       ],
       roundsWon: 0,
       roundsLost: 0,
-      chatMessages: [],
       createdAt,
       lastActivityAt: createdAt,
       currentRoundNumber: 0,
@@ -281,6 +280,7 @@ export class RoomsService {
     }
 
     this.rooms.set(roomCode, room)
+    this.roomChatMessages.set(roomCode, [])
 
     return {
       playerId: hostPlayer.playerId,
@@ -517,7 +517,7 @@ export class RoomsService {
       sentAt: new Date().toISOString(),
     }
 
-    room.chatMessages.push(message)
+    this.getRoomChatMessages(room.roomCode).push(message)
     this.touchRoom(room)
 
     return {
@@ -534,7 +534,7 @@ export class RoomsService {
     }
 
     room.status = 'closed'
-    this.rooms.delete(room.roomCode)
+    this.deleteRoom(room.roomCode)
 
     return {
       roomCode: room.roomCode,
@@ -570,7 +570,7 @@ export class RoomsService {
 
       room.status = 'closed'
       const closedAt = now.toISOString()
-      this.rooms.delete(room.roomCode)
+      this.deleteRoom(room.roomCode)
       closedRooms.push({
         roomCode: room.roomCode,
         closedAt,
@@ -620,6 +620,27 @@ export class RoomsService {
     room.lastActivityAt = new Date().toISOString()
   }
 
+  private deleteRoom(roomCode: string): void {
+    this.rooms.delete(roomCode)
+    this.roomChatMessages.delete(roomCode)
+  }
+
+  private getRoomChatMessages(roomCode: string): ChatMessage[] {
+    const existingMessages = this.roomChatMessages.get(roomCode)
+
+    if (existingMessages) {
+      return existingMessages
+    }
+
+    const nextMessages: ChatMessage[] = []
+    this.roomChatMessages.set(roomCode, nextMessages)
+    return nextMessages
+  }
+
+  private buildChatMessagesSnapshot(roomCode: string): ChatMessage[] {
+    return this.getRoomChatMessages(roomCode).map((message) => ({ ...message }))
+  }
+
   private findRoomBySocketId(socketId: string): LiveRoom | null {
     for (const room of this.rooms.values()) {
       if (room.players.some((player) => player.socketId === socketId)) {
@@ -660,7 +681,7 @@ export class RoomsService {
     }
 
     if (room.players.length === 0) {
-      this.rooms.delete(room.roomCode)
+      this.deleteRoom(room.roomCode)
 
       return {
         roomCode: room.roomCode,
@@ -752,7 +773,7 @@ export class RoomsService {
       canCurrentPlayerStartMatch: currentPlayer.playerId === room.hostPlayerId && room.players.length >= minPlayersRequired,
       createdAt: room.createdAt,
       currentRoundNumber: 0,
-      chatMessages: room.chatMessages.map((message) => ({ ...message })),
+      chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
     }
   }
 
@@ -784,7 +805,7 @@ export class RoomsService {
           scoreboard,
           players: room.activePvpRound.state.players.map((player) => ({ ...player })),
         },
-        chatMessages: room.chatMessages.map((message) => ({ ...message })),
+        chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
       }
     }
 
@@ -813,7 +834,7 @@ export class RoomsService {
           roundsLost: room.roundsLost,
           guessHistory: room.activeCoopRound.guessHistory.map((guessRecord) => ({ ...guessRecord })),
         },
-        chatMessages: room.chatMessages.map((message) => ({ ...message })),
+        chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
       }
     }
 
@@ -856,7 +877,7 @@ export class RoomsService {
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
-      chatMessages: room.chatMessages.map((message) => ({ ...message })),
+      chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
     }
   }
 
@@ -894,7 +915,7 @@ export class RoomsService {
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
-      chatMessages: room.chatMessages.map((message) => ({ ...message })),
+      chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
     }
   }
 

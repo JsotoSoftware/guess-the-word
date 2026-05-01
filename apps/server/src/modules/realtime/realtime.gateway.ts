@@ -329,6 +329,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private emitRoomClosed(event: RoomClosedEvent): void {
     this.server.to(event.roomCode).emit(SOCKET_EVENTS.roomClosed, event)
+    this.server.in(event.roomCode).socketsLeave(event.roomCode)
   }
 
   private emitRoomState(roomCode: string): void {

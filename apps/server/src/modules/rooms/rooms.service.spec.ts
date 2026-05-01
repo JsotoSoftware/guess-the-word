@@ -27,6 +27,10 @@ function createServiceWithWord(word = 'queso') {
   } as never)
 }
 
+function forceGeneratedRoomCode(service: RoomsService, roomCode: string) {
+  ;(service as unknown as { generateRoomCode: () => string }).generateRoomCode = () => roomCode
+}
+
 test('genera códigos de sala únicos en un uso normal', () => {
   const service = new RoomsService()
   const roomCodes = new Set<string>()
@@ -129,6 +133,38 @@ test('el host puede cerrar la sala y se elimina de la memoria activa', () => {
 
   assert.equal(response.roomCode, createdRoom.room.roomCode)
   assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+
+test('el chat se borra al cerrar la sala y no reaparece si el código se reutiliza', () => {
+  const service = new RoomsService()
+  forceGeneratedRoomCode(service, 'CHAT42')
+
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.sendChatMessage({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    text: 'Mensaje efímero',
+  })
+
+  service.closeRoom({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  const recreatedRoom = service.createRoom({
+    nickname: 'Luis',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-new-host',
+  })
+
+  assert.equal(recreatedRoom.room.roomCode, 'CHAT42')
+  assert.equal(recreatedRoom.room.chatMessages?.length ?? 0, 0)
 })
 
 test('sincroniza cambios de configuración para todos los jugadores del lobby', () => {
@@ -305,6 +341,36 @@ test('la limpieza por inactividad cierra salas de lobby abandonadas', () => {
   assert.equal(closedRooms.length, 1)
   assert.equal(closedRooms[0].roomCode, createdRoom.room.roomCode)
   assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+
+test('la limpieza por inactividad también elimina el chat almacenado', () => {
+  const service = new RoomsService()
+  forceGeneratedRoomCode(service, 'IDLE42')
+
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.sendChatMessage({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    text: 'Mensaje antes del cleanup',
+  })
+
+  const closedRooms = service.closeIdleRooms(new Date('2030-01-01T00:10:00.000Z'))
+  const recreatedRoom = service.createRoom({
+    nickname: 'Luis',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-new-host',
+  })
+
+  assert.equal(closedRooms.length, 1)
+  assert.equal(closedRooms[0].roomCode, 'IDLE42')
+  assert.equal(recreatedRoom.room.roomCode, 'IDLE42')
+  assert.equal(recreatedRoom.room.chatMessages?.length ?? 0, 0)
 })
 
 test('en PVP el host no puede iniciar con menos de 2 jugadores', () => {

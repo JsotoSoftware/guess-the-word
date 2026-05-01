@@ -194,6 +194,7 @@ export function RoomPage() {
   const currentVisibleRoom = lobbyRoom ?? activeRoom ?? summaryRoom
   const currentChatMessages = currentVisibleRoom?.chatMessages ?? []
   const currentRoomPlayer = currentVisibleRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
+  const chatScrollRef = useRef<HTMLDivElement | null>(null)
   const isHost = currentRoomPlayer?.isHost ?? false
 
   const pvpRound = activeRoom?.round.mode === 'pvp' ? activeRoom.round : null
@@ -254,6 +255,16 @@ export function RoomPage() {
     pvpRound,
     coopRound,
   ])
+
+  useEffect(() => {
+    const chatContainer = chatScrollRef.current
+
+    if (!chatContainer) {
+      return
+    }
+
+    chatContainer.scrollTop = chatContainer.scrollHeight
+  }, [currentVisibleRoom?.roomCode, currentChatMessages.length])
 
   const activeTimerLabel = useMemo(() => {
     if (!pvpRound?.timer.enabled || !pvpRound.timer.endsAt) {
@@ -416,7 +427,10 @@ export function RoomPage() {
   const renderChatPanel = (title: string, description: string) => (
     <SectionCard title={title} description={description}>
       <div className="space-y-3 text-sm text-slate-300">
-        <div className="min-h-48 rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-slate-400">
+        <div
+          ref={chatScrollRef}
+          className="h-80 overflow-y-auto rounded-2xl border border-white/5 bg-slate-950/60 p-4 text-slate-400"
+        >
           {currentChatMessages.length > 0 ? (
             currentChatMessages.map((message) => (
               <div key={message.messageId} className="mb-3 rounded-2xl border border-white/5 bg-slate-900/70 px-3 py-2 last:mb-0">
@@ -557,7 +571,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 6.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 6.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -702,7 +716,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 6.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 6.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -1032,7 +1046,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 6.1</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 6.2</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
