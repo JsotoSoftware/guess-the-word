@@ -20,6 +20,8 @@ import {
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type ResumeSessionRequest,
+  type ResumeSessionResponse,
   type RoomClosedEvent,
   type SendChatMessageRequest,
   type SendChatMessageResponse,
@@ -46,6 +48,7 @@ interface PongPayload {
 
 const ROOM_IDLE_CLEANUP_INTERVAL_MS = 30_000
 const PVP_TIMER_TICK_INTERVAL_MS = 1_000
+const RECONNECT_GRACE_SWEEP_INTERVAL_MS = 1_000
 
 @WebSocketGateway({
   cors: {
@@ -61,6 +64,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private idleCleanupInterval: NodeJS.Timeout | null = null
   private pvpTimerInterval: NodeJS.Timeout | null = null
+  private reconnectGraceInterval: NodeJS.Timeout | null = null
 
   constructor(
     private readonly config: AppConfigService,
@@ -83,6 +87,18 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         this.emitRoomState(roomCode)
       }
     }, PVP_TIMER_TICK_INTERVAL_MS)
+
+    this.reconnectGraceInterval = setInterval(() => {
+      const expiredReconnects = this.roomsService.expireReconnectGracePeriods()
+
+      for (const roomCode of expiredReconnects.updatedRoomCodes) {
+        this.emitRoomState(roomCode)
+      }
+
+      for (const closedRoom of expiredReconnects.closedRooms) {
+        this.emitRoomClosed(closedRoom)
+      }
+    }, RECONNECT_GRACE_SWEEP_INTERVAL_MS)
   }
 
   onModuleDestroy(): void {
@@ -94,6 +110,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (this.pvpTimerInterval) {
       clearInterval(this.pvpTimerInterval)
       this.pvpTimerInterval = null
+    }
+
+    if (this.reconnectGraceInterval) {
+      clearInterval(this.reconnectGraceInterval)
+      this.reconnectGraceInterval = null
     }
   }
 
@@ -175,6 +196,32 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`room:join failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.sessionResume)
+  handleResumeSession(
+    @MessageBody() payload: ResumeSessionRequest,
+    @ConnectedSocket() client: Socket,
+  ): Ack<ResumeSessionResponse> {
+    try {
+      const response = this.roomsService.resumeSession({
+        roomCode: payload.roomCode,
+        playerId: payload.playerId,
+        resumeToken: payload.resumeToken,
+        socketId: client.id,
+      })
+
+      void client.join(response.room.roomCode)
+      this.emitRoomState(response.room.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`session:resume failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

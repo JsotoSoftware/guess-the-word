@@ -5,6 +5,7 @@ import {
   GuessAlreadySubmittedError,
   InvalidGuessLengthAppError,
   NotHostError,
+  ReconnectExpiredError,
   RoomNotFoundError,
   RoomsService,
   StartNotAllowedError,
@@ -1211,7 +1212,7 @@ test('el inicio PVP real sigue bloqueado si faltan jugadores', async () => {
   )
 })
 
-test('cerrar la pestaña elimina al jugador de la sala igual que salir manualmente', () => {
+test('cerrar la pestaña marca al jugador como reconectando y mantiene su lugar durante la gracia', () => {
   const service = new RoomsService()
   const createdRoom = service.createRoom({
     nickname: 'Ana',
@@ -1230,12 +1231,72 @@ test('cerrar la pestaña elimina al jugador de la sala igual que salir manualmen
 
   assert.ok(disconnectResult)
   assert.equal(disconnectResult.roomStillExists, true)
-  assert.equal(targets.length, 1)
-  assert.equal(targets[0].room.players.length, 1)
-  assert.equal(targets[0].room.players[0].nickname, 'Ana')
+  assert.equal(targets.length, 2)
+  assert.equal(targets.every((target) => target.room.players.length === 2), true)
+  assert.equal(targets.every((target) => target.room.players.find((player) => player.nickname === 'Luis')?.connectionState === 'reconnecting'), true)
 })
 
-test('si el socket desconectado era el host, la sala transfiere el host restante', () => {
+test('puede reanudar la sesión dentro del período de gracia y conservar el playerId', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  const joinedRoom = service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  service.disconnectSocket('socket-guest')
+
+  const resumedSession = service.resumeSession({
+    roomCode: createdRoom.room.roomCode,
+    playerId: joinedRoom.playerId,
+    resumeToken: joinedRoom.resumeToken,
+    socketId: 'socket-guest-new',
+  })
+
+  assert.equal(resumedSession.room.currentPlayerId, joinedRoom.playerId)
+  assert.equal(resumedSession.room.players.find((player) => player.playerId === joinedRoom.playerId)?.connectionState, 'connected')
+
+  const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
+  assert.equal(targets.some((target) => target.socketId === 'socket-guest-new'), true)
+})
+
+test('si el host está desconectado no cuenta para iniciar PVP hasta reconectarse', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  service.disconnectSocket('socket-guest')
+
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  assert.equal(snapshot.viewState, 'lobby')
+  assert.equal(snapshot.canCurrentPlayerStartMatch, false)
+
+  await assert.rejects(
+    () => service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' }),
+    StartNotAllowedError,
+  )
+})
+
+test('si la gracia expira, el jugador se elimina y el host se transfiere si hacía falta', () => {
   const service = new RoomsService()
   const createdRoom = service.createRoom({
     nickname: 'Ana',
@@ -1249,18 +1310,19 @@ test('si el socket desconectado era el host, la sala transfiere el host restante
     socketId: 'socket-guest',
   })
 
-  const disconnectResult = service.disconnectSocket('socket-host')
+  service.disconnectSocket('socket-host')
+  const expirationResult = service.expireReconnectGracePeriods(new Date('2100-01-01T00:00:00.000Z'))
   const targets = service.getRoomStateTargets(createdRoom.room.roomCode)
 
-  assert.ok(disconnectResult)
-  assert.equal(disconnectResult.roomStillExists, true)
+  assert.deepEqual(expirationResult.closedRooms, [])
+  assert.deepEqual(expirationResult.updatedRoomCodes, [createdRoom.room.roomCode])
   assert.equal(targets.length, 1)
   assert.equal(targets[0].room.hostPlayerId, targets[0].room.players[0].playerId)
   assert.equal(targets[0].room.players[0].nickname, 'Luis')
   assert.equal(targets[0].room.players[0].isHost, true)
 })
 
-test('si se cierra la última pestaña, la sala se elimina', () => {
+test('si la gracia expira para la última sesión, la sala se elimina', () => {
   const service = new RoomsService()
   const createdRoom = service.createRoom({
     nickname: 'Ana',
@@ -1268,9 +1330,33 @@ test('si se cierra la última pestaña, la sala se elimina', () => {
     socketId: 'socket-host',
   })
 
-  const disconnectResult = service.disconnectSocket('socket-host')
+  service.disconnectSocket('socket-host')
+  const expirationResult = service.expireReconnectGracePeriods(new Date('2100-01-01T00:00:00.000Z'))
 
-  assert.ok(disconnectResult)
-  assert.equal(disconnectResult.roomStillExists, false)
+  assert.deepEqual(expirationResult.updatedRoomCodes, [])
+  assert.equal(expirationResult.closedRooms.length, 1)
+  assert.equal(expirationResult.closedRooms[0].roomCode, createdRoom.room.roomCode)
   assert.equal(service.hasRoom(createdRoom.room.roomCode), false)
+})
+
+test('si la sesión ya expiró no se puede reanudar', () => {
+  const service = new RoomsService()
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: DEFAULT_ROOM_SETTINGS,
+    socketId: 'socket-host',
+  })
+
+  service.disconnectSocket('socket-host')
+  service.expireReconnectGracePeriods(new Date('2100-01-01T00:00:00.000Z'))
+
+  assert.throws(
+    () => service.resumeSession({
+      roomCode: createdRoom.room.roomCode,
+      playerId: createdRoom.playerId,
+      resumeToken: createdRoom.resumeToken,
+      socketId: 'socket-host-new',
+    }),
+    ReconnectExpiredError,
+  )
 })

@@ -16,6 +16,7 @@ import {
   type PvpRoundPlacement,
   type PlayerConnectionState,
   type PlayerSummary,
+  type ResumeSessionResponse,
   type RoomClosedEvent,
   type RoomSettings,
   type RoomSnapshot,
@@ -42,6 +43,7 @@ import { WordsService } from '../words/words.service'
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_ROOM_CODE_ATTEMPTS = 100
 const ROOM_IDLE_TIMEOUT_MS = 5 * 60 * 1000
+const RECONNECT_GRACE_PERIOD_MS = 60 * 1000
 
 class RoomActionError extends Error {
   constructor(
@@ -142,6 +144,12 @@ export class InvalidChatMessageError extends RoomActionError {
   }
 }
 
+export class ReconnectExpiredError extends RoomActionError {
+  constructor(roomCode: string) {
+    super('RECONNECT_EXPIRED', `La sesión para volver a la sala ${roomCode} ya expiró o no es válida.`, { roomCode })
+  }
+}
+
 interface LivePlayer {
   playerId: string
   nickname: string
@@ -150,6 +158,7 @@ interface LivePlayer {
   joinedAt: string
   socketId: string
   resumeToken: string
+  disconnectDeadlineAt: string | null
 }
 
 interface LivePvpRound {
@@ -197,6 +206,13 @@ interface StartMatchInput {
   socketId: string
 }
 
+interface ResumeSessionInput {
+  roomCode: string
+  playerId: string
+  resumeToken: string
+  socketId: string
+}
+
 interface SubmitGuessInput {
   roomCode: string
   socketId: string
@@ -232,6 +248,11 @@ interface LeaveRoomResult {
 interface RoomMembershipResult {
   roomCode: string
   roomStillExists: boolean
+}
+
+interface ExpiredReconnectResult {
+  updatedRoomCodes: string[]
+  closedRooms: RoomClosedEvent[]
 }
 
 @Injectable()
@@ -349,6 +370,35 @@ export class RoomsService {
     }
   }
 
+  resumeSession(input: ResumeSessionInput): ResumeSessionResponse {
+    let room: LiveRoom
+
+    try {
+      room = this.getRoomOrThrow(input.roomCode)
+    } catch (error) {
+      if (error instanceof RoomNotFoundError) {
+        throw new ReconnectExpiredError(input.roomCode)
+      }
+
+      throw error
+    }
+
+    const player = room.players.find((candidate) => candidate.playerId === input.playerId)
+
+    if (!player || player.resumeToken !== input.resumeToken) {
+      throw new ReconnectExpiredError(input.roomCode)
+    }
+
+    player.socketId = input.socketId
+    player.connectionState = 'connected'
+    player.disconnectDeadlineAt = null
+    this.touchRoom(room)
+
+    return {
+      room: this.buildRoomSnapshot(room, player.playerId),
+    }
+  }
+
   async startMatch(input: StartMatchInput): Promise<StartMatchResponse> {
     const room = this.getRoomOrThrow(input.roomCode)
     this.ensureRoomIsLobby(room)
@@ -360,10 +410,11 @@ export class RoomsService {
     }
 
     const minPlayersRequired = MIN_PLAYERS_BY_MODE[room.settings.mode]
+    const connectedPlayersCount = this.getConnectedPlayersCount(room)
 
-    if (room.players.length < minPlayersRequired) {
-      throw new StartNotAllowedError('La sala aún no cumple con el mínimo de jugadores para iniciar.', {
-        currentPlayers: room.players.length,
+    if (connectedPlayersCount < minPlayersRequired) {
+      throw new StartNotAllowedError('La sala aún no cumple con el mínimo de jugadores conectados para iniciar.', {
+        currentPlayers: connectedPlayersCount,
         minPlayersRequired,
         mode: room.settings.mode,
       })
@@ -554,6 +605,47 @@ export class RoomsService {
     return updatedRoomCodes
   }
 
+  expireReconnectGracePeriods(now = new Date()): ExpiredReconnectResult {
+    const updatedRoomCodes: string[] = []
+    const closedRooms: RoomClosedEvent[] = []
+
+    for (const room of [...this.rooms.values()]) {
+      const expiredPlayers = room.players.filter((player) => (
+        player.connectionState === 'reconnecting'
+        && player.disconnectDeadlineAt !== null
+        && new Date(player.disconnectDeadlineAt).getTime() <= now.getTime()
+      ))
+
+      if (expiredPlayers.length === 0) {
+        continue
+      }
+
+      let roomStillExists = true
+
+      for (const player of expiredPlayers) {
+        const result = this.removePlayerFromRoomByPlayerId(room, player.playerId, now)
+        roomStillExists = result.roomStillExists
+
+        if (!roomStillExists) {
+          closedRooms.push({
+            roomCode: room.roomCode,
+            closedAt: now.toISOString(),
+          })
+          break
+        }
+      }
+
+      if (roomStillExists) {
+        updatedRoomCodes.push(room.roomCode)
+      }
+    }
+
+    return {
+      updatedRoomCodes,
+      closedRooms,
+    }
+  }
+
   closeIdleRooms(now = new Date()): RoomClosedEvent[] {
     const closedRooms: RoomClosedEvent[] = []
 
@@ -600,7 +692,15 @@ export class RoomsService {
       return null
     }
 
-    return this.removePlayerFromRoom(room, socketId)
+    const player = this.getPlayerBySocketId(room, socketId)
+    player.connectionState = 'reconnecting'
+    player.disconnectDeadlineAt = new Date(Date.now() + RECONNECT_GRACE_PERIOD_MS).toISOString()
+    this.touchRoom(room)
+
+    return {
+      roomCode: room.roomCode,
+      roomStillExists: true,
+    }
   }
 
   hasRoom(roomCode: string): boolean {
@@ -641,6 +741,10 @@ export class RoomsService {
     return this.getRoomChatMessages(roomCode).map((message) => ({ ...message }))
   }
 
+  private getConnectedPlayersCount(room: LiveRoom): number {
+    return room.players.filter((player) => player.connectionState === 'connected').length
+  }
+
   private findRoomBySocketId(socketId: string): LiveRoom | null {
     for (const room of this.rooms.values()) {
       if (room.players.some((player) => player.socketId === socketId)) {
@@ -662,8 +766,18 @@ export class RoomsService {
     return room
   }
 
-  private removePlayerFromRoom(room: LiveRoom, socketId: string): RoomMembershipResult {
-    const playerIndex = room.players.findIndex((player) => player.socketId === socketId)
+  private removePlayerFromRoom(room: LiveRoom, socketId: string, now = new Date()): RoomMembershipResult {
+    const player = room.players.find((candidate) => candidate.socketId === socketId)
+
+    if (!player) {
+      throw new PlayerNotInRoomError(room.roomCode)
+    }
+
+    return this.removePlayerFromRoomByPlayerId(room, player.playerId, now)
+  }
+
+  private removePlayerFromRoomByPlayerId(room: LiveRoom, playerId: string, now = new Date()): RoomMembershipResult {
+    const playerIndex = room.players.findIndex((player) => player.playerId === playerId)
 
     if (playerIndex === -1) {
       throw new PlayerNotInRoomError(room.roomCode)
@@ -677,6 +791,14 @@ export class RoomsService {
       room.activePvpRound.state = {
         ...room.activePvpRound.state,
         players: room.activePvpRound.state.players.filter((player) => player.playerId !== removedPlayer.playerId),
+      }
+
+      if (room.activePvpRound.state.players.length > 0 && room.activePvpRound.state.status === 'active') {
+        const hasPendingPlayers = room.activePvpRound.state.players.some((player) => !player.solved && !player.outOfAttempts)
+
+        if (!hasPendingPlayers) {
+          room.activePvpRound.state = this.roundStateService.completePvpRound(room.activePvpRound.state, now.toISOString())
+        }
       }
     }
 
@@ -736,6 +858,7 @@ export class RoomsService {
       joinedAt: input.joinedAt,
       socketId: input.socketId,
       resumeToken: randomBytes(24).toString('hex'),
+      disconnectDeadlineAt: null,
     }
   }
 
@@ -760,6 +883,7 @@ export class RoomsService {
   private buildLobbySnapshot(room: LiveRoom, currentPlayerId: string): LobbyRoomSnapshot {
     const currentPlayer = this.getCurrentPlayer(room, currentPlayerId)
     const minPlayersRequired = MIN_PLAYERS_BY_MODE[room.settings.mode]
+    const connectedPlayersCount = this.getConnectedPlayersCount(room)
 
     return {
       roomCode: room.roomCode,
@@ -770,7 +894,7 @@ export class RoomsService {
       players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
       currentPlayerId,
       minPlayersRequired,
-      canCurrentPlayerStartMatch: currentPlayer.playerId === room.hostPlayerId && room.players.length >= minPlayersRequired,
+      canCurrentPlayerStartMatch: currentPlayer.playerId === room.hostPlayerId && connectedPlayersCount >= minPlayersRequired,
       createdAt: room.createdAt,
       currentRoundNumber: 0,
       chatMessages: this.buildChatMessagesSnapshot(room.roomCode),

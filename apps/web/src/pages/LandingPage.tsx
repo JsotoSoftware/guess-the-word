@@ -1,5 +1,5 @@
 import { DEFAULT_ROOM_SETTINGS, type GameMode, type GuessSubmissionMode, type RoomSettings } from '@guess-the-word/shared'
-import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { SectionCard } from '../components/ui/SectionCard'
 import { useRoomSession } from '../contexts/room-session'
@@ -62,7 +62,12 @@ function roomModeLabel(mode: GameMode): string {
 
 export function LandingPage() {
   const navigate = useNavigate()
-  const { connected, createRoom, joinRoom } = useRoomSession()
+  const { connected, room, createRoom, joinRoom } = useRoomSession()
+  useEffect(() => {
+    if (room) {
+      navigate(`/room/${room.roomCode}`, { replace: true })
+    }
+  }, [navigate, room])
   const [createRoomForm, setCreateRoomForm] = useState<CreateRoomFormState>(initialCreateRoomForm)
   const [joinRoomForm, setJoinRoomForm] = useState<JoinRoomFormState>(initialJoinRoomForm)
   const [createRoomError, setCreateRoomError] = useState<string | null>(null)

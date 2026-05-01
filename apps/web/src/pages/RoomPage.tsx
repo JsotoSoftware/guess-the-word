@@ -71,8 +71,10 @@ function getStartMessage(room: LobbyRoomSnapshot, isHost: boolean): string {
     return 'Solo el anfitrión podrá iniciar la partida.'
   }
 
-  if (room.settings.mode === 'pvp' && room.players.length < 2) {
-    return 'PVP requiere al menos 2 jugadores para habilitar el inicio.'
+  const connectedPlayersCount = room.players.filter((player) => player.connectionState === 'connected').length
+
+  if (room.settings.mode === 'pvp' && connectedPlayersCount < 2) {
+    return 'PVP requiere al menos 2 jugadores conectados para habilitar el inicio.'
   }
 
   if (room.settings.mode === 'coop') {
@@ -91,6 +93,18 @@ function formatRemainingSeconds(seconds: number | null): string {
   const minutes = Math.floor(safeSeconds / 60)
   const remainder = safeSeconds % 60
   return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+}
+
+function formatConnectionState(value: 'connected' | 'disconnected' | 'reconnecting'): string {
+  if (value === 'connected') {
+    return 'Conectado'
+  }
+
+  if (value === 'reconnecting') {
+    return 'Reconectando'
+  }
+
+  return 'Desconectado'
 }
 
 function createEmptyLetters(length: number): string[] {
@@ -571,7 +585,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 6.2</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida PVP activa · fase 6.3</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Conectado como {currentRoomPlayer?.nickname ?? 'jugador'}.
@@ -716,7 +730,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 6.2</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Partida cooperativa activa · fase 6.3</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {activeRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               Ronda {activeRoom.currentRoundNumber} de {activeRoom.totalRounds}. Todo el room comparte intentos e historial.
@@ -864,7 +878,7 @@ export function RoomPage() {
                       {player.playerId === currentPlayerId ? <span className="rounded-full border border-emerald-400/30 bg-emerald-500/10 px-3 py-1 text-emerald-200">Tú</span> : null}
                     </div>
                   </div>
-                  <p className="mt-2 text-slate-500">Estado de conexión: {player.connectionState}</p>
+                  <p className="mt-2 text-slate-500">Estado de conexión: {formatConnectionState(player.connectionState)}</p>
                 </div>
               ))}
             </div>
@@ -928,7 +942,7 @@ export function RoomPage() {
                 <div key={player.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
                   <div>
                     <p className="font-medium text-white">{player.nickname}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{player.connectionState}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{formatConnectionState(player.connectionState)}</p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
                     {player.isHost ? <span className="rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-brand-200">Host</span> : null}
@@ -1028,7 +1042,7 @@ export function RoomPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Sala no disponible</p>
           <h2 className="mt-2 text-3xl font-bold text-white">No hay una sesión activa para la sala {normalizedCode}.</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
-            Crea una sala o únete desde la pantalla principal para cargar el lobby en tiempo real. El flujo de reanudación después de refrescar la página se implementará en una fase posterior.
+            Crea una sala o únete desde la pantalla principal para cargar el lobby en tiempo real. Si aún conservas una sesión válida, la app intentará reanudarla automáticamente después de reconectarse.
           </p>
         </section>
 
@@ -1046,7 +1060,7 @@ export function RoomPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 6.2</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Lobby multijugador · fase 6.3</p>
           <h2 className="mt-2 text-3xl font-bold text-white">Sala {lobbyRoom.roomCode}</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
             {currentRoomPlayer ? `Conectado como ${currentRoomPlayer.nickname}${currentRoomPlayer.isHost ? ' · Anfitrión' : ''}.` : 'Esperando sincronización del jugador actual.'}
@@ -1094,7 +1108,7 @@ export function RoomPage() {
               <div key={player.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3 text-sm text-slate-300">
                 <div>
                   <p className="font-medium text-white">{player.nickname}</p>
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{player.connectionState}</p>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{formatConnectionState(player.connectionState)}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {player.isHost ? <span className="rounded-full border border-brand-400/30 bg-brand-400/10 px-3 py-1 text-xs text-brand-200">Host</span> : null}

@@ -20,6 +20,8 @@ import {
   type JoinRoomResponse,
   type LeaveRoomRequest,
   type LeaveRoomResponse,
+  type ResumeSessionRequest,
+  type ResumeSessionResponse,
   type RoomClosedEvent,
   type RoomSnapshot,
   type RoomStateEvent,
@@ -43,6 +45,7 @@ interface RoomSessionContextValue {
   closedRoomCode: string | null
   createRoom: (payload: CreateRoomRequest) => Promise<CreateRoomResponse>
   joinRoom: (payload: JoinRoomRequest) => Promise<JoinRoomResponse>
+  resumeSession: (payload: ResumeSessionRequest) => Promise<ResumeSessionResponse>
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
   startMatch: (payload: StartMatchRequest) => Promise<StartMatchResponse>
   submitGuess: (payload: SubmitGuessRequest) => Promise<SubmitGuessResponse>
@@ -53,6 +56,57 @@ interface RoomSessionContextValue {
 }
 
 const RoomSessionContext = createContext<RoomSessionContextValue | undefined>(undefined)
+const ROOM_SESSION_STORAGE_KEY = 'guess-the-word.room-session'
+
+interface StoredRoomSession {
+  roomCode: string
+  playerId: string
+  resumeToken: string
+}
+
+function readStoredRoomSession(): StoredRoomSession | null {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(ROOM_SESSION_STORAGE_KEY)
+
+    if (!rawValue) {
+      return null
+    }
+
+    const parsedValue = JSON.parse(rawValue) as Partial<StoredRoomSession>
+
+    if (
+      typeof parsedValue.roomCode !== 'string'
+      || typeof parsedValue.playerId !== 'string'
+      || typeof parsedValue.resumeToken !== 'string'
+    ) {
+      return null
+    }
+
+    return parsedValue as StoredRoomSession
+  } catch {
+    return null
+  }
+}
+
+function writeStoredRoomSession(session: StoredRoomSession): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.setItem(ROOM_SESSION_STORAGE_KEY, JSON.stringify(session))
+}
+
+function clearStoredRoomSession(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  window.localStorage.removeItem(ROOM_SESSION_STORAGE_KEY)
+}
 
 function extractErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'No se pudo completar la operación.'
@@ -60,10 +114,11 @@ function extractErrorMessage(error: unknown): string {
 
 export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null)
+  const autoResumeInFlightRef = useRef(false)
   const [connected, setConnected] = useState(false)
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
-  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null)
-  const [resumeToken, setResumeToken] = useState<string | null>(null)
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(() => readStoredRoomSession()?.playerId ?? null)
+  const [resumeToken, setResumeToken] = useState<string | null>(() => readStoredRoomSession()?.resumeToken ?? null)
   const [closedRoomCode, setClosedRoomCode] = useState<string | null>(null)
 
   useEffect(() => {
@@ -74,7 +129,41 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
 
     socketRef.current = socket
 
-    const handleConnect = () => setConnected(true)
+    const attemptStoredSessionResume = () => {
+      const storedSession = readStoredRoomSession()
+
+      if (!storedSession || autoResumeInFlightRef.current) {
+        return
+      }
+
+      autoResumeInFlightRef.current = true
+
+      socket.timeout(5000).emit(
+        SOCKET_EVENTS.sessionResume,
+        storedSession,
+        (timeoutError: Error | null, response?: Ack<ResumeSessionResponse>) => {
+          autoResumeInFlightRef.current = false
+
+          if (timeoutError || !response || !response.ok) {
+            clearStoredRoomSession()
+            setRoom(null)
+            setCurrentPlayerId(null)
+            setResumeToken(null)
+            return
+          }
+
+          setRoom(response.data.room)
+          setCurrentPlayerId(storedSession.playerId)
+          setResumeToken(storedSession.resumeToken)
+          setClosedRoomCode(null)
+        },
+      )
+    }
+
+    const handleConnect = () => {
+      setConnected(true)
+      attemptStoredSessionResume()
+    }
     const handleDisconnect = () => setConnected(false)
     const handleRoomState = (event: RoomStateEvent) => {
       setRoom(event.room)
@@ -82,6 +171,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setClosedRoomCode(null)
     }
     const handleRoomClosed = (event: RoomClosedEvent) => {
+      clearStoredRoomSession()
       setRoom(null)
       setCurrentPlayerId(null)
       setResumeToken(null)
@@ -112,7 +202,11 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     socket.on(SOCKET_EVENTS.roomClosed, handleRoomClosed)
     socket.on(SOCKET_EVENTS.chatMessage, handleChatMessage)
 
-    setConnected(socket.connected)
+    if (socket.connected) {
+      handleConnect()
+    } else {
+      setConnected(false)
+    }
 
     return () => {
       socket.off('connect', handleConnect)
@@ -158,6 +252,11 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const createRoom = useCallback(async (payload: CreateRoomRequest) => {
     try {
       const response = await emitWithAck<CreateRoomResponse, CreateRoomRequest>(SOCKET_EVENTS.roomCreate, payload)
+      writeStoredRoomSession({
+        roomCode: response.room.roomCode,
+        playerId: response.playerId,
+        resumeToken: response.resumeToken,
+      })
       setRoom(response.room)
       setCurrentPlayerId(response.playerId)
       setResumeToken(response.resumeToken)
@@ -171,12 +270,39 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const joinRoom = useCallback(async (payload: JoinRoomRequest) => {
     try {
       const response = await emitWithAck<JoinRoomResponse, JoinRoomRequest>(SOCKET_EVENTS.roomJoin, payload)
+      writeStoredRoomSession({
+        roomCode: response.room.roomCode,
+        playerId: response.playerId,
+        resumeToken: response.resumeToken,
+      })
       setRoom(response.room)
       setCurrentPlayerId(response.playerId)
       setResumeToken(response.resumeToken)
       setClosedRoomCode(null)
       return response
     } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
+  const resumeSession = useCallback(async (payload: ResumeSessionRequest) => {
+    try {
+      const response = await emitWithAck<ResumeSessionResponse, ResumeSessionRequest>(SOCKET_EVENTS.sessionResume, payload)
+      writeStoredRoomSession({
+        roomCode: payload.roomCode,
+        playerId: payload.playerId,
+        resumeToken: payload.resumeToken,
+      })
+      setRoom(response.room)
+      setCurrentPlayerId(payload.playerId)
+      setResumeToken(payload.resumeToken)
+      setClosedRoomCode(null)
+      return response
+    } catch (error) {
+      clearStoredRoomSession()
+      setRoom(null)
+      setCurrentPlayerId(null)
+      setResumeToken(null)
       throw new Error(extractErrorMessage(error))
     }
   }, [emitWithAck])
@@ -222,6 +348,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const leaveRoom = useCallback(async (payload: LeaveRoomRequest) => {
     try {
       const response = await emitWithAck<LeaveRoomResponse, LeaveRoomRequest>(SOCKET_EVENTS.roomLeave, payload)
+      clearStoredRoomSession()
       setRoom(null)
       setCurrentPlayerId(null)
       setResumeToken(null)
@@ -234,6 +361,10 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const closeRoom = useCallback(async (payload: CloseRoomRequest) => {
     try {
       const response = await emitWithAck<CloseRoomResponse, CloseRoomRequest>(SOCKET_EVENTS.roomClose, payload)
+      clearStoredRoomSession()
+      setRoom(null)
+      setCurrentPlayerId(null)
+      setResumeToken(null)
       return response
     } catch (error) {
       throw new Error(extractErrorMessage(error))
@@ -252,6 +383,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     closedRoomCode,
     createRoom,
     joinRoom,
+    resumeSession,
     updateRoomSettings,
     startMatch,
     submitGuess,
@@ -267,6 +399,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     closedRoomCode,
     createRoom,
     joinRoom,
+    resumeSession,
     updateRoomSettings,
     startMatch,
     submitGuess,
