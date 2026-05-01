@@ -1,4 +1,4 @@
-import type { KeyboardEvent } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import type { LetterFeedback } from '@guess-the-word/shared'
 
 import { forwardRef } from 'react'
@@ -10,6 +10,8 @@ interface LetterBoxProps {
   autoFocus?: boolean
   onChange?: (value: string) => void
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
+  className?: string
+  style?: CSSProperties
 }
 
 const feedbackClasses: Record<LetterFeedback, string> = {
@@ -19,7 +21,7 @@ const feedbackClasses: Record<LetterFeedback, string> = {
 }
 
 export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function LetterBox(
-  { value, feedback, disabled = false, autoFocus = false, onChange, onKeyDown },
+  { value, feedback, disabled = false, autoFocus = false, onChange, onKeyDown, className = '', style },
   ref,
 ) {
   const colorClass = feedback
@@ -37,10 +39,11 @@ export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function L
       maxLength={1}
       onChange={(event) => onChange?.(event.target.value)}
       onKeyDown={onKeyDown}
-      className={`h-14 w-14 rounded-[14px] border-[3px] text-center text-[1.45rem] font-black uppercase leading-none tracking-[0.08em] outline-none transition focus:border-[#ffd34f] focus:ring-4 focus:ring-[#ffd34f]/30 disabled:cursor-not-allowed ${colorClass}`}
+      className={`h-14 w-14 rounded-[14px] border-[3px] text-center text-[1.45rem] font-black uppercase leading-none tracking-[0.08em] outline-none transition focus:border-[#ffd34f] focus:ring-4 focus:ring-[#ffd34f]/30 disabled:cursor-not-allowed ${colorClass} ${className}`}
       style={{
         fontFamily: 'Trebuchet MS, Nunito, ui-sans-serif, system-ui, sans-serif',
         textShadow: '0 1px 0 rgba(255,255,255,0.25)',
+        ...style,
       }}
     />
   )

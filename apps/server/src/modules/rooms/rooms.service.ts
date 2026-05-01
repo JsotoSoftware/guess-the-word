@@ -9,6 +9,7 @@ import {
   type ChatMessage,
   type CloseRoomResponse,
   type ContinueRoundResponse,
+  type CoopCompletedRound,
   type CreateRoomResponse,
   type GameMode,
   type FinalResultsRoomSnapshot,
@@ -196,6 +197,7 @@ interface LiveRoom {
   currentRoundNumber: number
   activePvpRound: LivePvpRound | null
   activeCoopRound: EngineCoopRoundState | null
+  coopRoundHistory: CoopCompletedRound[]
 }
 
 interface CreateRoomInput {
@@ -323,6 +325,7 @@ export class RoomsService {
       currentRoundNumber: 0,
       activePvpRound: null,
       activeCoopRound: null,
+      coopRoundHistory: [],
     }
 
     this.rooms.set(roomCode, room)
@@ -505,6 +508,7 @@ export class RoomsService {
     room.activeCoopRound = null
     room.roundsWon = 0
     room.roundsLost = 0
+    room.coopRoundHistory = []
     room.scoreboard = room.scoreboard
       .map((entry) => ({
         ...entry,
@@ -536,10 +540,13 @@ export class RoomsService {
 
       try {
         const previousRoundState = room.activeCoopRound
-        const nextRoundState = this.roundStateService.applyCoopGuess(
-          room.activeCoopRound,
-          normalizedGuess,
-          player.playerId,
+        const nextRoundState = this.withCoopGuessNickname(
+          this.roundStateService.applyCoopGuess(
+            room.activeCoopRound,
+            normalizedGuess,
+            player.playerId,
+          ),
+          player.nickname,
         )
 
         room.activeCoopRound = nextRoundState
@@ -578,10 +585,14 @@ export class RoomsService {
 
     try {
       const previousRoundState = room.activePvpRound.state
-      const nextRoundState = this.roundStateService.applyPvpGuess(
-        previousRoundState,
+      const nextRoundState = this.withPvpGuessNickname(
+        this.roundStateService.applyPvpGuess(
+          previousRoundState,
+          player.playerId,
+          normalizedGuess,
+        ),
         player.playerId,
-        normalizedGuess,
+        player.nickname,
       )
 
       room.activePvpRound.state = nextRoundState
@@ -1162,6 +1173,10 @@ export class RoomsService {
       Date.parse(room.activeCoopRound.completedAt) + room.settings.roundSummaryAutoAdvanceSeconds * 1000,
     ).toISOString()
 
+    const solvedGuess = room.activeCoopRound.status === 'won'
+      ? room.activeCoopRound.guessHistory[room.activeCoopRound.guessHistory.length - 1] ?? null
+      : null
+
     return {
       roomCode: room.roomCode,
       status: 'in_game',
@@ -1182,6 +1197,9 @@ export class RoomsService {
         attemptsLeft: room.activeCoopRound.attemptsLeft,
         roundsWon: room.roundsWon,
         roundsLost: room.roundsLost,
+        guessHistory: room.activeCoopRound.guessHistory.map((guessRecord) => ({ ...guessRecord })),
+        solvedByPlayerId: solvedGuess?.submittedByPlayerId ?? null,
+        solvedByNickname: solvedGuess?.submittedByNickname ?? null,
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
@@ -1251,6 +1269,10 @@ export class RoomsService {
         totalRounds: room.settings.totalRounds,
         roundsWon: room.roundsWon,
         roundsLost: room.roundsLost,
+        rounds: room.coopRoundHistory.map((roundEntry) => ({
+          ...roundEntry,
+          guessHistory: roundEntry.guessHistory.map((guessRecord) => ({ ...guessRecord })),
+        })),
       },
       chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
     }
@@ -1348,6 +1370,49 @@ export class RoomsService {
     return PVP_BASE_POINTS + (PVP_PLACEMENT_BONUSES[finishPlacement] ?? 0)
   }
 
+  private withCoopGuessNickname(round: EngineCoopRoundState, nickname: string): EngineCoopRoundState {
+    if (round.guessHistory.length === 0) {
+      return round
+    }
+
+    const lastGuessIndex = round.guessHistory.length - 1
+
+    return {
+      ...round,
+      guessHistory: round.guessHistory.map((guessRecord, index) => (
+        index === lastGuessIndex
+          ? { ...guessRecord, submittedByNickname: nickname }
+          : guessRecord
+      )),
+    }
+  }
+
+  private withPvpGuessNickname(
+    round: EnginePvpRoundState,
+    playerId: string,
+    nickname: string,
+  ): EnginePvpRoundState {
+    return {
+      ...round,
+      players: round.players.map((player) => {
+        if (player.playerId !== playerId || player.guessHistory.length === 0) {
+          return player
+        }
+
+        const lastGuessIndex = player.guessHistory.length - 1
+
+        return {
+          ...player,
+          guessHistory: player.guessHistory.map((guessRecord, index) => (
+            index === lastGuessIndex
+              ? { ...guessRecord, submittedByNickname: nickname }
+              : guessRecord
+          )),
+        }
+      }),
+    }
+  }
+
   private applyCoopRoundOutcomeUpdate(
     room: LiveRoom,
     previousRoundState: EngineCoopRoundState,
@@ -1356,6 +1421,20 @@ export class RoomsService {
     if (previousRoundState.status !== 'active' || nextRoundState.status === 'active') {
       return
     }
+
+    const solvedGuess = nextRoundState.status === 'won'
+      ? nextRoundState.guessHistory[nextRoundState.guessHistory.length - 1] ?? null
+      : null
+
+    room.coopRoundHistory.push({
+      roundNumber: room.currentRoundNumber,
+      secretWord: nextRoundState.secretWord,
+      outcome: nextRoundState.status,
+      attemptsLeft: nextRoundState.attemptsLeft,
+      guessHistory: nextRoundState.guessHistory.map((guessRecord) => ({ ...guessRecord })),
+      solvedByPlayerId: solvedGuess?.submittedByPlayerId ?? null,
+      solvedByNickname: solvedGuess?.submittedByNickname ?? null,
+    })
 
     if (nextRoundState.status === 'won') {
       room.roundsWon += 1

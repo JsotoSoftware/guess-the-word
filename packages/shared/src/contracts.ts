@@ -50,6 +50,7 @@ export interface GuessRecord {
   result: LetterResult[]
   submittedAt: string
   submittedByPlayerId?: string
+  submittedByNickname?: string | null
 }
 
 export interface ScoreEntry {
@@ -154,6 +155,9 @@ export interface CoopRoundSummaryState {
   attemptsLeft: number
   roundsWon: number
   roundsLost: number
+  guessHistory: GuessRecord[]
+  solvedByPlayerId: string | null
+  solvedByNickname: string | null
 }
 
 export interface RoundSummaryRoomSnapshot extends RoomSnapshotBase {
@@ -179,11 +183,22 @@ export interface PvpFinalResultsState {
   standings: PvpFinalStanding[]
 }
 
+export interface CoopCompletedRound {
+  roundNumber: number
+  secretWord: string
+  outcome: RoundOutcome
+  attemptsLeft: number
+  guessHistory: GuessRecord[]
+  solvedByPlayerId: string | null
+  solvedByNickname: string | null
+}
+
 export interface CoopFinalResultsState {
   mode: 'coop'
   totalRounds: number
   roundsWon: number
   roundsLost: number
+  rounds: CoopCompletedRound[]
 }
 
 export interface FinalResultsRoomSnapshot extends RoomSnapshotBase {
