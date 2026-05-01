@@ -14,6 +14,8 @@ import {
   type ChatMessageEvent,
   type CloseRoomRequest,
   type CloseRoomResponse,
+  type ContinueRoundRequest,
+  type ContinueRoundResponse,
   type CreateRoomRequest,
   type CreateRoomResponse,
   type JoinRoomRequest,
@@ -47,6 +49,7 @@ interface RoomSessionContextValue {
   joinRoom: (payload: JoinRoomRequest) => Promise<JoinRoomResponse>
   resumeSession: (payload: ResumeSessionRequest) => Promise<ResumeSessionResponse>
   updateRoomSettings: (payload: UpdateRoomSettingsRequest) => Promise<UpdateRoomSettingsResponse>
+  continueRound: (payload: ContinueRoundRequest) => Promise<ContinueRoundResponse>
   startMatch: (payload: StartMatchRequest) => Promise<StartMatchResponse>
   submitGuess: (payload: SubmitGuessRequest) => Promise<SubmitGuessResponse>
   sendChatMessage: (payload: SendChatMessageRequest) => Promise<SendChatMessageResponse>
@@ -327,6 +330,16 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     }
   }, [emitWithAck])
 
+  const continueRound = useCallback(async (payload: ContinueRoundRequest) => {
+    try {
+      const response = await emitWithAck<ContinueRoundResponse, ContinueRoundRequest>(SOCKET_EVENTS.roundContinue, payload)
+      setRoom(response.room)
+      return response
+    } catch (error) {
+      throw new Error(extractErrorMessage(error))
+    }
+  }, [emitWithAck])
+
   const submitGuess = useCallback(async (payload: SubmitGuessRequest) => {
     try {
       const response = await emitWithAck<SubmitGuessResponse, SubmitGuessRequest>(SOCKET_EVENTS.gameSubmitGuess, payload)
@@ -386,6 +399,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     resumeSession,
     updateRoomSettings,
     startMatch,
+    continueRound,
     submitGuess,
     sendChatMessage,
     leaveRoom,
@@ -402,6 +416,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     resumeSession,
     updateRoomSettings,
     startMatch,
+    continueRound,
     submitGuess,
     sendChatMessage,
     leaveRoom,

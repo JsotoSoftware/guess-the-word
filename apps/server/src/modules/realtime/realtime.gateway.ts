@@ -14,6 +14,8 @@ import {
   type AppError,
   type CloseRoomRequest,
   type CloseRoomResponse,
+  type ContinueRoundRequest,
+  type ContinueRoundResponse,
   type CreateRoomRequest,
   type CreateRoomResponse,
   type JoinRoomRequest,
@@ -49,6 +51,7 @@ interface PongPayload {
 const ROOM_IDLE_CLEANUP_INTERVAL_MS = 30_000
 const PVP_TIMER_TICK_INTERVAL_MS = 1_000
 const RECONNECT_GRACE_SWEEP_INTERVAL_MS = 1_000
+const ROUND_SUMMARY_AUTO_ADVANCE_INTERVAL_MS = 1_000
 
 @WebSocketGateway({
   cors: {
@@ -65,6 +68,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
   private idleCleanupInterval: NodeJS.Timeout | null = null
   private pvpTimerInterval: NodeJS.Timeout | null = null
   private reconnectGraceInterval: NodeJS.Timeout | null = null
+  private roundSummaryAdvanceInterval: NodeJS.Timeout | null = null
 
   constructor(
     private readonly config: AppConfigService,
@@ -99,6 +103,14 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
         this.emitRoomClosed(closedRoom)
       }
     }, RECONNECT_GRACE_SWEEP_INTERVAL_MS)
+
+    this.roundSummaryAdvanceInterval = setInterval(async () => {
+      const updatedRoomCodes = await this.roomsService.advanceExpiredRoundSummaries()
+
+      for (const roomCode of updatedRoomCodes) {
+        this.emitRoomState(roomCode)
+      }
+    }, ROUND_SUMMARY_AUTO_ADVANCE_INTERVAL_MS)
   }
 
   onModuleDestroy(): void {
@@ -115,6 +127,11 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     if (this.reconnectGraceInterval) {
       clearInterval(this.reconnectGraceInterval)
       this.reconnectGraceInterval = null
+    }
+
+    if (this.roundSummaryAdvanceInterval) {
+      clearInterval(this.roundSummaryAdvanceInterval)
+      this.roundSummaryAdvanceInterval = null
     }
   }
 
@@ -269,6 +286,29 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     } catch (error) {
       this.logger.warn(`room:start_match failed for ${client.id}: ${this.getErrorMessage(error)}`)
+      return this.toAckFailure(error)
+    }
+  }
+
+  @SubscribeMessage(SOCKET_EVENTS.roundContinue)
+  async handleContinueRound(
+    @MessageBody() payload: ContinueRoundRequest,
+    @ConnectedSocket() client: Socket,
+  ): Promise<Ack<ContinueRoundResponse>> {
+    try {
+      const response = await this.roomsService.continueRound({
+        roomCode: payload.roomCode,
+        socketId: client.id,
+      })
+
+      this.emitRoomState(payload.roomCode)
+
+      return {
+        ok: true,
+        data: response,
+      }
+    } catch (error) {
+      this.logger.warn(`round:continue failed for ${client.id}: ${this.getErrorMessage(error)}`)
       return this.toAckFailure(error)
     }
   }

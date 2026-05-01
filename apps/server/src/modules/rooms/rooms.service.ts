@@ -8,8 +8,10 @@ import {
   type ActiveRoundRoomSnapshot,
   type ChatMessage,
   type CloseRoomResponse,
+  type ContinueRoundResponse,
   type CreateRoomResponse,
   type GameMode,
+  type FinalResultsRoomSnapshot,
   type JoinRoomResponse,
   type LeaveRoomResponse,
   type LobbyRoomSnapshot,
@@ -144,6 +146,12 @@ export class InvalidChatMessageError extends RoomActionError {
   }
 }
 
+export class RoundSummaryNotActiveError extends RoomActionError {
+  constructor(roomCode: string) {
+    super('UNAUTHORIZED_ACTION', `La sala ${roomCode} no está esperando continuar una ronda.`, { roomCode })
+  }
+}
+
 export class ReconnectExpiredError extends RoomActionError {
   constructor(roomCode: string) {
     super('RECONNECT_EXPIRED', `La sesión para volver a la sala ${roomCode} ya expiró o no es válida.`, { roomCode })
@@ -202,6 +210,11 @@ interface UpdateRoomSettingsInput {
 }
 
 interface StartMatchInput {
+  roomCode: string
+  socketId: string
+}
+
+interface ContinueRoundInput {
   roomCode: string
   socketId: string
 }
@@ -420,47 +433,41 @@ export class RoomsService {
       })
     }
 
-    if (!this.wordsService) {
-      throw new Error('WordsService is not available.')
-    }
-
-    const secretWord = await this.wordsService.getRandomSecretWord({})
-    const startedAt = new Date().toISOString()
-
     room.status = 'in_game'
     room.currentRoundNumber = 1
+    await this.startRound(room, room.currentRoundNumber)
+    this.touchRoom(room)
 
-    if (room.settings.mode === 'pvp') {
-      const roundState = this.roundStateService.createPvpRoundState(
-        secretWord.word,
-        room.players.map((roomPlayer) => ({
-          playerId: roomPlayer.playerId,
-          nickname: roomPlayer.nickname,
-        })),
-        room.settings.attemptsPerRound,
-        startedAt,
-      )
+    return {
+      room: this.buildActiveRoundSnapshot(room, player.playerId),
+    }
+  }
 
-      const timerDurationSeconds = room.settings.pvpTimerSeconds
-      const timerEndsAt = timerDurationSeconds === null
-        ? null
-        : new Date(Date.parse(startedAt) + timerDurationSeconds * 1000).toISOString()
+  async continueRound(input: ContinueRoundInput): Promise<ContinueRoundResponse> {
+    const room = this.getRoomOrThrow(input.roomCode)
+    const player = this.getPlayerBySocketId(room, input.socketId)
 
-      room.activePvpRound = {
-        state: roundState,
-        timerDurationSeconds,
-        timerEndsAt,
-      }
-      room.activeCoopRound = null
-    } else {
-      room.activePvpRound = null
-      room.activeCoopRound = this.roundStateService.createCoopRoundState(
-        secretWord.word,
-        room.settings.attemptsPerRound,
-        startedAt,
-      )
+    if (player.playerId !== room.hostPlayerId) {
+      throw new NotHostError()
     }
 
+    if (!this.isRoomWaitingOnRoundSummary(room)) {
+      throw new RoundSummaryNotActiveError(room.roomCode)
+    }
+
+    if (room.currentRoundNumber >= room.settings.totalRounds) {
+      room.status = 'match_finished'
+      room.activePvpRound = null
+      room.activeCoopRound = null
+      this.touchRoom(room)
+
+      return {
+        room: this.buildFinalResultsSnapshot(room, player.playerId),
+      }
+    }
+
+    room.currentRoundNumber += 1
+    await this.startRound(room, room.currentRoundNumber)
     this.touchRoom(room)
 
     return {
@@ -605,6 +612,32 @@ export class RoomsService {
     return updatedRoomCodes
   }
 
+  async advanceExpiredRoundSummaries(now = new Date()): Promise<string[]> {
+    const updatedRoomCodes: string[] = []
+
+    for (const room of this.rooms.values()) {
+      const summaryAutoAdvanceAt = this.getSummaryAutoAdvanceAt(room)
+
+      if (!summaryAutoAdvanceAt || summaryAutoAdvanceAt.getTime() > now.getTime()) {
+        continue
+      }
+
+      if (room.currentRoundNumber >= room.settings.totalRounds) {
+        room.status = 'match_finished'
+        room.activePvpRound = null
+        room.activeCoopRound = null
+      } else {
+        room.currentRoundNumber += 1
+        await this.startRound(room, room.currentRoundNumber, now.toISOString())
+      }
+
+      this.touchRoom(room)
+      updatedRoomCodes.push(room.roomCode)
+    }
+
+    return updatedRoomCodes
+  }
+
   expireReconnectGracePeriods(now = new Date()): ExpiredReconnectResult {
     const updatedRoomCodes: string[] = []
     const closedRooms: RoomClosedEvent[] = []
@@ -741,6 +774,71 @@ export class RoomsService {
     return this.getRoomChatMessages(roomCode).map((message) => ({ ...message }))
   }
 
+  private async startRound(room: LiveRoom, roundNumber: number, startedAt = new Date().toISOString()): Promise<void> {
+    if (!this.wordsService) {
+      throw new Error('WordsService is not available.')
+    }
+
+    const secretWord = await this.wordsService.getRandomSecretWord({})
+
+    if (room.settings.mode === 'pvp') {
+      const roundState = this.roundStateService.createPvpRoundState(
+        secretWord.word,
+        room.players.map((roomPlayer) => ({
+          playerId: roomPlayer.playerId,
+          nickname: roomPlayer.nickname,
+        })),
+        room.settings.attemptsPerRound,
+        startedAt,
+      )
+
+      const timerDurationSeconds = room.settings.pvpTimerSeconds
+      const timerEndsAt = timerDurationSeconds === null
+        ? null
+        : new Date(Date.parse(startedAt) + timerDurationSeconds * 1000).toISOString()
+
+      room.activePvpRound = {
+        state: roundState,
+        timerDurationSeconds,
+        timerEndsAt,
+      }
+      room.activeCoopRound = null
+    } else {
+      room.activePvpRound = null
+      room.activeCoopRound = this.roundStateService.createCoopRoundState(
+        secretWord.word,
+        room.settings.attemptsPerRound,
+        startedAt,
+      )
+    }
+
+    room.status = 'in_game'
+    room.currentRoundNumber = roundNumber
+  }
+
+  private isRoomWaitingOnRoundSummary(room: LiveRoom): boolean {
+    return Boolean(
+      room.status === 'in_game' && (
+        room.activePvpRound?.state.status === 'completed'
+        || (room.activeCoopRound && room.activeCoopRound.status !== 'active')
+      ),
+    )
+  }
+
+  private getSummaryAutoAdvanceAt(room: LiveRoom): Date | null {
+    if (!this.isRoomWaitingOnRoundSummary(room)) {
+      return null
+    }
+
+    const completedAt = room.activePvpRound?.state.completedAt ?? room.activeCoopRound?.completedAt
+
+    if (!completedAt) {
+      return null
+    }
+
+    return new Date(Date.parse(completedAt) + room.settings.roundSummaryAutoAdvanceSeconds * 1000)
+  }
+
   private getConnectedPlayersCount(room: LiveRoom): number {
     return room.players.filter((player) => player.connectionState === 'connected').length
   }
@@ -863,6 +961,10 @@ export class RoomsService {
   }
 
   private buildRoomSnapshot(room: LiveRoom, currentPlayerId: string): RoomSnapshot {
+    if (room.status === 'match_finished') {
+      return this.buildFinalResultsSnapshot(room, currentPlayerId)
+    }
+
     if (room.status === 'in_game') {
       this.expirePvpTimerIfNeeded(room)
 
@@ -1039,6 +1141,73 @@ export class RoomsService {
       },
       canCurrentPlayerAdvanceSummary: currentPlayer.playerId === room.hostPlayerId,
       summaryAutoAdvanceAt,
+      chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
+    }
+  }
+
+  private buildFinalResultsSnapshot(room: LiveRoom, currentPlayerId: string): FinalResultsRoomSnapshot {
+    this.getCurrentPlayer(room, currentPlayerId)
+
+    if (room.settings.mode === 'pvp') {
+      const standings = room.scoreboard
+        .map((entry, index) => ({
+          playerId: entry.playerId,
+          nickname: entry.nickname,
+          totalPoints: entry.totalPoints,
+          finalPlacement: index + 1,
+        }))
+        .sort((left, right) => {
+          if (right.totalPoints !== left.totalPoints) {
+            return right.totalPoints - left.totalPoints
+          }
+
+          return left.nickname.localeCompare(right.nickname)
+        })
+        .map((entry, index) => ({
+          ...entry,
+          finalPlacement: index + 1,
+        }))
+
+      return {
+        roomCode: room.roomCode,
+        status: 'match_finished',
+        viewState: 'final_results',
+        settings: room.settings,
+        hostPlayerId: room.hostPlayerId,
+        players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+        currentPlayerId,
+        minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+        canCurrentPlayerStartMatch: false,
+        createdAt: room.createdAt,
+        currentRoundNumber: room.currentRoundNumber,
+        totalRounds: room.settings.totalRounds,
+        finalResults: {
+          mode: 'pvp',
+          standings,
+        },
+        chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
+      }
+    }
+
+    return {
+      roomCode: room.roomCode,
+      status: 'match_finished',
+      viewState: 'final_results',
+      settings: room.settings,
+      hostPlayerId: room.hostPlayerId,
+      players: room.players.map((player) => this.toPlayerSummary(player, room.hostPlayerId)),
+      currentPlayerId,
+      minPlayersRequired: MIN_PLAYERS_BY_MODE[room.settings.mode],
+      canCurrentPlayerStartMatch: false,
+      createdAt: room.createdAt,
+      currentRoundNumber: room.currentRoundNumber,
+      totalRounds: room.settings.totalRounds,
+      finalResults: {
+        mode: 'coop',
+        totalRounds: room.settings.totalRounds,
+        roundsWon: room.roundsWon,
+        roundsLost: room.roundsLost,
+      },
       chatMessages: this.buildChatMessagesSnapshot(room.roomCode),
     }
   }

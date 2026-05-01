@@ -1,5 +1,6 @@
 import {
   type ActiveRoundRoomSnapshot,
+  type FinalResultsRoomSnapshot,
   type GuessSubmissionMode,
   type LetterResult,
   type LobbyRoomSnapshot,
@@ -145,6 +146,7 @@ export function RoomPage() {
     closedRoomCode,
     updateRoomSettings,
     startMatch,
+    continueRound,
     submitGuess,
     sendChatMessage,
     leaveRoom,
@@ -156,6 +158,7 @@ export function RoomPage() {
   const [settingsError, setSettingsError] = useState<string | null>(null)
   const [isSavingSettings, setIsSavingSettings] = useState(false)
   const [isStartingMatch, setIsStartingMatch] = useState(false)
+  const [isContinuingRound, setIsContinuingRound] = useState(false)
   const [isSubmittingGuess, setIsSubmittingGuess] = useState(false)
   const [chatDraft, setChatDraft] = useState('')
   const [isSendingChat, setIsSendingChat] = useState(false)
@@ -188,6 +191,14 @@ export function RoomPage() {
     return room as RoundSummaryRoomSnapshot
   }, [normalizedCode, room])
 
+  const finalResultsRoom = useMemo(() => {
+    if (!room || room.roomCode !== normalizedCode || room.viewState !== 'final_results') {
+      return null
+    }
+
+    return room as FinalResultsRoomSnapshot
+  }, [normalizedCode, room])
+
   const [settingsForm, setSettingsForm] = useState<LobbySettingsFormState | null>(
     lobbyRoom ? toSettingsFormState(lobbyRoom.settings) : null,
   )
@@ -205,7 +216,7 @@ export function RoomPage() {
     }
   }, [clearClosedRoomCode, closedRoomCode, navigate, normalizedCode])
 
-  const currentVisibleRoom = lobbyRoom ?? activeRoom ?? summaryRoom
+  const currentVisibleRoom = lobbyRoom ?? activeRoom ?? summaryRoom ?? finalResultsRoom
   const currentChatMessages = currentVisibleRoom?.chatMessages ?? []
   const currentRoomPlayer = currentVisibleRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const chatScrollRef = useRef<HTMLDivElement | null>(null)
@@ -390,6 +401,23 @@ export function RoomPage() {
       setActionMessage(error instanceof Error ? error.message : 'No se pudo iniciar la partida.')
     } finally {
       setIsStartingMatch(false)
+    }
+  }
+
+  const handleContinueRound = async () => {
+    if (!summaryRoom) {
+      return
+    }
+
+    setActionMessage(null)
+    setIsContinuingRound(true)
+
+    try {
+      await continueRound({ roomCode: summaryRoom.roomCode })
+    } catch (error) {
+      setActionMessage(error instanceof Error ? error.message : 'No se pudo continuar hacia la siguiente ronda.')
+    } finally {
+      setIsContinuingRound(false)
     }
   }
 
@@ -900,7 +928,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 5.4</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 7.1</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
@@ -953,6 +981,28 @@ export function RoomPage() {
             </div>
           </SectionCard>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
+          {summaryRoom.canCurrentPlayerAdvanceSummary ? (
+            <button
+              type="button"
+              onClick={handleContinueRound}
+              disabled={isContinuingRound}
+              className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {isContinuingRound
+                ? 'Continuando...'
+                : summaryRoom.currentRoundNumber >= summaryRoom.totalRounds
+                  ? 'Ver resultado final'
+                  : 'Continuar a la siguiente ronda'}
+            </button>
+          ) : null}
+          <span>
+            {summaryRoom.canCurrentPlayerAdvanceSummary
+              ? 'El host puede continuar manualmente o esperar el autoavance.'
+              : 'Esperando que el host continúe o que llegue el autoavance.'}
+          </span>
+        </div>
       </div>
     )
   }
@@ -967,7 +1017,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen de ronda PVP · fase 4.4</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen de ronda PVP · fase 7.1</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
@@ -1026,11 +1076,73 @@ export function RoomPage() {
           </SectionCard>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
-          {summaryRoom.canCurrentPlayerAdvanceSummary
-            ? 'La continuación manual y el siguiente round llegan en la fase 7. Por ahora ya puedes validar el payload de resumen y el cierre limpio de la ronda.'
-            : 'Esperando la siguiente fase para continuar manual o automáticamente hacia la siguiente ronda.'}
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">
+          {summaryRoom.canCurrentPlayerAdvanceSummary ? (
+            <button
+              type="button"
+              onClick={handleContinueRound}
+              disabled={isContinuingRound}
+              className="rounded-full bg-brand-500 px-5 py-3 font-medium text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+            >
+              {isContinuingRound
+                ? 'Continuando...'
+                : summaryRoom.currentRoundNumber >= summaryRoom.totalRounds
+                  ? 'Ver resultado final'
+                  : 'Continuar a la siguiente ronda'}
+            </button>
+          ) : null}
+          <span>
+            {summaryRoom.canCurrentPlayerAdvanceSummary
+              ? 'El host puede continuar manualmente o esperar el autoavance.'
+              : 'Esperando que el host continúe o que llegue el autoavance.'}
+          </span>
         </div>
+      </div>
+    )
+  }
+
+  if (finalResultsRoom) {
+    return (
+      <div className="space-y-8">
+        <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resultados finales · fase 7.1</p>
+            <h2 className="mt-2 text-3xl font-bold text-white">Sala {finalResultsRoom.roomCode}</h2>
+            <p className="mt-3 max-w-2xl text-slate-300">
+              La partida terminó después de {finalResultsRoom.totalRounds} rondas.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
+              {connected ? 'Conectado' : 'Reconectando'}
+            </span>
+          </div>
+        </section>
+
+        {finalResultsRoom.finalResults.mode === 'pvp' ? (
+          <SectionCard title="Clasificación final" description="La fase 7.1 ya conecta todas las rondas y detecta el fin de la partida.">
+            <div className="space-y-3 text-sm text-slate-300">
+              {finalResultsRoom.finalResults.standings.map((standing) => (
+                <div key={standing.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <div>
+                    <p className="font-medium text-white">#{standing.finalPlacement} · {standing.nickname}</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Resultado acumulado</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{standing.totalPoints} pts</span>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        ) : (
+          <SectionCard title="Resultado del equipo" description="La fase 7.2 ampliará esta vista, pero el match ya termina de forma sincronizada.">
+            <div className="space-y-3 text-sm text-slate-300">
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas ganadas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsWon}</span></div>
+              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas perdidas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsLost}</span></div>
+            </div>
+          </SectionCard>
+        )}
+
+        {renderChatPanel('Chat final de la sala', 'El room sigue abierto hasta que alguien salga o el host lo cierre.')}
       </div>
     )
   }
