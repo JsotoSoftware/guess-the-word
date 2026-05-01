@@ -108,6 +108,18 @@ function formatConnectionState(value: 'connected' | 'disconnected' | 'reconnecti
   return 'Desconectado'
 }
 
+function buildCoopFinalMessage(roundsWon: number, roundsLost: number): string {
+  if (roundsWon > roundsLost) {
+    return 'Victoria del equipo'
+  }
+
+  if (roundsLost > roundsWon) {
+    return 'Derrota del equipo'
+  }
+
+  return 'Resultado equilibrado'
+}
+
 function createEmptyLetters(length: number): string[] {
   return Array.from({ length }, () => '')
 }
@@ -928,7 +940,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 7.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen cooperativo · fase 7.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
@@ -1017,7 +1029,7 @@ export function RoomPage() {
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen de ronda PVP · fase 7.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resumen de ronda PVP · fase 7.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {summaryRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
               La ronda terminó. Palabra secreta: <span className="font-semibold text-white">{summaryRoom.summary.secretWord.toUpperCase()}</span>
@@ -1102,44 +1114,104 @@ export function RoomPage() {
   }
 
   if (finalResultsRoom) {
+    const currentFinalRoomPlayer = finalResultsRoom.players.find((player) => player.playerId === currentPlayerId) ?? null
+    const isFinalRoomHost = currentFinalRoomPlayer?.isHost ?? false
+
     return (
       <div className="space-y-8">
         <section className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-slate-900/85 p-8 shadow-glow lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resultados finales · fase 7.1</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-brand-200">Resultados finales · fase 7.2</p>
             <h2 className="mt-2 text-3xl font-bold text-white">Sala {finalResultsRoom.roomCode}</h2>
             <p className="mt-3 max-w-2xl text-slate-300">
-              La partida terminó después de {finalResultsRoom.totalRounds} rondas.
+              La partida terminó después de {finalResultsRoom.totalRounds} rondas y el resultado final permanece dentro del flujo de la sala.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleCopyRoomCode}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm text-slate-200 transition hover:border-brand-400 hover:text-white"
+            >
+              Copiar código
+            </button>
+            {isFinalRoomHost ? (
+              <button
+                type="button"
+                onClick={handleCloseRoom}
+                disabled={isClosingRoom}
+                className="rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-100 transition hover:border-amber-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isClosingRoom ? 'Cerrando sala...' : 'Cerrar sala'}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleLeaveRoom}
+              disabled={isLeavingRoom}
+              className="rounded-full border border-rose-400/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-100 transition hover:border-rose-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLeavingRoom ? 'Saliendo...' : 'Salir de la sala'}
+            </button>
             <span className={`rounded-full border px-4 py-2 text-sm ${connected ? 'border-emerald-400/30 bg-emerald-500/10 text-emerald-200' : 'border-amber-400/30 bg-amber-400/10 text-amber-200'}`}>
               {connected ? 'Conectado' : 'Reconectando'}
             </span>
           </div>
         </section>
 
+        {copyFeedback ? <div className="rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm text-slate-300">{copyFeedback}</div> : null}
+        {actionMessage ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">{actionMessage}</div> : null}
+
         {finalResultsRoom.finalResults.mode === 'pvp' ? (
-          <SectionCard title="Clasificación final" description="La fase 7.1 ya conecta todas las rondas y detecta el fin de la partida.">
-            <div className="space-y-3 text-sm text-slate-300">
-              {finalResultsRoom.finalResults.standings.map((standing) => (
-                <div key={standing.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
-                  <div>
-                    <p className="font-medium text-white">#{standing.finalPlacement} · {standing.nickname}</p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Resultado acumulado</p>
-                  </div>
-                  <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{standing.totalPoints} pts</span>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <SectionCard title="Ganador de la partida" description="El ranking final usa la puntuación acumulada de todas las rondas PVP.">
+              <div className="space-y-4 text-sm text-slate-300">
+                <div className="rounded-3xl border border-brand-400/20 bg-brand-500/10 px-5 py-5">
+                  <p className="text-xs uppercase tracking-[0.22em] text-brand-200">Campeón final</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{finalResultsRoom.finalResults.standings[0]?.nickname ?? 'Sin resultado'}</p>
+                  <p className="mt-2 text-slate-300">Puntos totales: {finalResultsRoom.finalResults.standings[0]?.totalPoints ?? 0}</p>
                 </div>
-              ))}
-            </div>
-          </SectionCard>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                  <p>Jugadores clasificados: <span className="font-medium text-white">{finalResultsRoom.finalResults.standings.length}</span></p>
+                  <p className="mt-2">Rondas jugadas: <span className="font-medium text-white">{finalResultsRoom.totalRounds}</span></p>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Clasificación final" description="Resultado acumulado visible dentro de la misma sala, sin cambiar de ruta.">
+              <div className="space-y-3 text-sm text-slate-300">
+                {finalResultsRoom.finalResults.standings.map((standing) => (
+                  <div key={standing.playerId} className="flex items-center justify-between rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">
+                    <div>
+                      <p className="font-medium text-white">#{standing.finalPlacement} · {standing.nickname}</p>
+                      <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Resultado acumulado del match</p>
+                    </div>
+                    <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-300">{standing.totalPoints} pts</span>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
         ) : (
-          <SectionCard title="Resultado del equipo" description="La fase 7.2 ampliará esta vista, pero el match ya termina de forma sincronizada.">
-            <div className="space-y-3 text-sm text-slate-300">
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas ganadas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsWon}</span></div>
-              <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas perdidas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsLost}</span></div>
-            </div>
-          </SectionCard>
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+            <SectionCard title="Resultado del equipo" description="El modo cooperativo resume el match por rondas ganadas y perdidas.">
+              <div className="space-y-4 text-sm text-slate-300">
+                <div className="rounded-3xl border border-brand-400/20 bg-brand-500/10 px-5 py-5">
+                  <p className="text-xs uppercase tracking-[0.22em] text-brand-200">Resultado final</p>
+                  <p className="mt-2 text-2xl font-bold text-white">{buildCoopFinalMessage(finalResultsRoom.finalResults.roundsWon, finalResultsRoom.finalResults.roundsLost)}</p>
+                  <p className="mt-2 text-slate-300">Rondas jugadas: {finalResultsRoom.finalResults.totalRounds}</p>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard title="Resumen del match" description="Todas las rondas del equipo se mantienen visibles en el estado final de la sala.">
+              <div className="space-y-3 text-sm text-slate-300">
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas ganadas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsWon}</span></div>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Rondas perdidas: <span className="font-medium text-white">{finalResultsRoom.finalResults.roundsLost}</span></div>
+                <div className="rounded-2xl border border-white/5 bg-slate-950/60 px-4 py-3">Jugadores en la sala: <span className="font-medium text-white">{finalResultsRoom.players.length}</span></div>
+              </div>
+            </SectionCard>
+          </div>
         )}
 
         {renderChatPanel('Chat final de la sala', 'El room sigue abierto hasta que alguien salga o el host lo cierre.')}

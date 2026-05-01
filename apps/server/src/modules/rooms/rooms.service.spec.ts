@@ -1216,6 +1216,68 @@ test('al continuar la última ronda la sala pasa a resultados finales', async ()
   assert.equal(response.room.status, 'match_finished')
   assert.equal(response.room.finalResults.mode, 'pvp')
   assert.equal(response.room.finalResults.standings[0].nickname, 'Ana')
+  assert.equal(response.room.finalResults.standings[0].totalPoints, PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[1])
+})
+
+test('al continuar la última ronda cooperativa la sala pasa a resultados finales del equipo', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      totalRounds: 1,
+      attemptsPerRound: 2,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'bosque' })
+
+  const response = await service.continueRound({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+
+  assert.equal(response.room.viewState, 'final_results')
+  assert.equal(response.room.status, 'match_finished')
+  assert.equal(response.room.finalResults.mode, 'coop')
+  assert.equal(response.room.finalResults.roundsWon, 1)
+  assert.equal(response.room.finalResults.roundsLost, 0)
+  assert.equal(response.room.finalResults.totalRounds, 1)
+})
+
+
+test('el autoavance del último summary también lleva a resultados finales dentro de la sala', async () => {
+  const service = createServiceWithWord('bosque')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'coop',
+      totalRounds: 1,
+      attemptsPerRound: 2,
+      roundSummaryAutoAdvanceSeconds: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  await service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'bosque' })
+
+  const updatedRoomCodes = await service.advanceExpiredRoundSummaries(new Date('2100-01-01T00:00:00.000Z'))
+  const snapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  assert.deepEqual(updatedRoomCodes, [createdRoom.room.roomCode])
+  assert.equal(snapshot.viewState, 'final_results')
+  assert.equal(snapshot.status, 'match_finished')
+
+  if (snapshot.viewState !== 'final_results' || snapshot.finalResults.mode !== 'coop') {
+    throw new Error('Expected a final Co-op results snapshot.')
+  }
+
+  assert.equal(snapshot.finalResults.roundsWon, 1)
+  assert.equal(snapshot.finalResults.roundsLost, 0)
 })
 
 test('la expiración del temporizador cierra la ronda PVP y rechaza guesses tardíos', async () => {
