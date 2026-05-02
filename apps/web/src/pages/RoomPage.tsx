@@ -506,6 +506,23 @@ export function RoomPage() {
   const currentPvpRank = currentPvpScoreEntry && pvpRound
     ? pvpRound.scoreboard.findIndex((entry) => entry.playerId === currentPvpScoreEntry.playerId) + 1
     : null
+  const pendingOtherPvpPlayers = useMemo(() => {
+    if (!pvpRound || !activeRoom) {
+      return []
+    }
+
+    return pvpRound.players
+      .filter((player) => player.playerId !== currentPlayerId && !player.solved && !player.outOfAttempts)
+      .map((player) => {
+        const roomPlayer = activeRoom.players.find((candidate) => candidate.playerId === player.playerId)
+
+        return {
+          playerId: player.playerId,
+          nickname: player.nickname,
+          connectionState: roomPlayer?.connectionState ?? 'connected',
+        }
+      })
+  }, [activeRoom, currentPlayerId, pvpRound])
   const activeWordLength = pvpRound?.wordLength ?? coopRound?.wordLength ?? 0
   const activeRoundKey = activeRoom ? `${activeRoom.roomCode}:${activeRoom.currentRoundNumber}:${activeRoom.round.mode}:${activeWordLength}` : null
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
@@ -595,6 +612,8 @@ export function RoomPage() {
     [activeGuessHistory, activeWordLength],
   )
   const hasMisplacedClues = boardClueState.misplacedLettersByPosition.some((lettersByPosition) => lettersByPosition.length > 0)
+  const totalBoardAttempts = pvpRound ? activeRoom?.settings.attemptsPerRound ?? 0 : coopRound?.totalAttempts ?? 0
+  const currentBoardAttemptNumber = Math.min(activeGuessHistory.length + (canSubmitGuess ? 1 : 0), totalBoardAttempts)
   const responsiveLetterBoxClassName = getResponsiveLetterBoxClassName(activeWordLength)
 
   useEffect(() => {
@@ -950,7 +969,9 @@ export function RoomPage() {
 
       {canSubmitGuess ? (
         <div className="border-t border-white/12 pt-4">
-          <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.2em] text-[#fef3c7]">Tu intento actual</p>
+          <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.2em] text-[#fef3c7]">
+            Tu intento actual {currentBoardAttemptNumber}/{totalBoardAttempts}
+          </p>
           <GuessGridRow wordLength={activeWordLength} featured>
             {letters.map((letter, index) => (
               <LetterBox
@@ -1031,6 +1052,32 @@ export function RoomPage() {
 
           <div className="mt-4">
             <GameStatusBanner icon={boardMessageIcon} title="Tu misión" message={boardMessage} tone={boardMessageTone} />
+          </div>
+
+          <div className="mt-4 rounded-[28px] border border-violet-300/20 bg-violet-500/10 px-4 py-4 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)]">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-violet-200/25 bg-violet-300/15 text-2xl text-violet-50">👀</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">Jugadores pendientes</p>
+                {pendingOtherPvpPlayers.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {pendingOtherPvpPlayers.map((player) => (
+                      <span
+                        key={player.playerId}
+                        className="rounded-full border border-white/10 bg-slate-950/45 px-3 py-1.5 text-sm font-black text-white"
+                      >
+                        {player.nickname}
+                        <span className="ml-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-300/75">
+                          {formatConnectionState(player.connectionState)}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-lg font-black text-white">Nadie. La ronda ya puede cerrarse.</p>
+                )}
+              </div>
+            </div>
           </div>
         </section>
 

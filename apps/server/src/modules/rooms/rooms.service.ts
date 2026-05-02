@@ -47,7 +47,7 @@ import { WordsService } from '../words/words.service'
 const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const MAX_ROOM_CODE_ATTEMPTS = 100
 const ROOM_IDLE_TIMEOUT_MS = 5 * 60 * 1000
-const RECONNECT_GRACE_PERIOD_MS = 60 * 1000
+const RECONNECT_GRACE_PERIOD_MS = 5 * 60 * 1000
 
 class RoomActionError extends Error {
   constructor(

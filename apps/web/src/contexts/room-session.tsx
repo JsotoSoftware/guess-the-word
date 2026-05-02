@@ -70,6 +70,16 @@ interface StoredRoomSession {
   resumeToken: string
 }
 
+class SocketAckError extends Error {
+  constructor(
+    message: string,
+    public readonly code?: string,
+  ) {
+    super(message)
+    this.name = 'SocketAckError'
+  }
+}
+
 function readStoredRoomSession(): StoredRoomSession | null {
   if (typeof window === 'undefined') {
     return null
@@ -121,6 +131,7 @@ function extractErrorMessage(error: unknown): string {
 export function RoomSessionProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null)
   const autoResumeInFlightRef = useRef(false)
+  const autoResumeRetryTimeoutRef = useRef<number | null>(null)
   const [connected, setConnected] = useState(false)
   const [room, setRoom] = useState<RoomSnapshot | null>(null)
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(() => readStoredRoomSession()?.playerId ?? null)
@@ -135,13 +146,32 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
 
     socketRef.current = socket
 
-    const attemptStoredSessionResume = () => {
-      const storedSession = readStoredRoomSession()
+    const clearPendingAutoResumeRetry = () => {
+      if (autoResumeRetryTimeoutRef.current !== null) {
+        window.clearTimeout(autoResumeRetryTimeoutRef.current)
+        autoResumeRetryTimeoutRef.current = null
+      }
+    }
 
-      if (!storedSession || autoResumeInFlightRef.current) {
+    const scheduleAutoResumeRetry = () => {
+      if (autoResumeRetryTimeoutRef.current !== null) {
         return
       }
 
+      autoResumeRetryTimeoutRef.current = window.setTimeout(() => {
+        autoResumeRetryTimeoutRef.current = null
+        attemptStoredSessionResume()
+      }, 3000)
+    }
+
+    const attemptStoredSessionResume = () => {
+      const storedSession = readStoredRoomSession()
+
+      if (!storedSession || autoResumeInFlightRef.current || !socket.connected) {
+        return
+      }
+
+      clearPendingAutoResumeRetry()
       autoResumeInFlightRef.current = true
 
       socket.timeout(10000).emit(
@@ -150,14 +180,26 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
         (timeoutError: Error | null, response?: Ack<ResumeSessionResponse>) => {
           autoResumeInFlightRef.current = false
 
-          if (timeoutError || !response || !response.ok) {
-            clearStoredRoomSession()
-            setRoom(null)
-            setCurrentPlayerId(null)
-            setResumeToken(null)
+          if (timeoutError || !response) {
+            scheduleAutoResumeRetry()
             return
           }
 
+          if (!response.ok) {
+            if (response.error.code === 'RECONNECT_EXPIRED') {
+              clearPendingAutoResumeRetry()
+              clearStoredRoomSession()
+              setRoom(null)
+              setCurrentPlayerId(null)
+              setResumeToken(null)
+              return
+            }
+
+            scheduleAutoResumeRetry()
+            return
+          }
+
+          clearPendingAutoResumeRetry()
           setRoom(response.data.room)
           setCurrentPlayerId(storedSession.playerId)
           setResumeToken(storedSession.resumeToken)
@@ -170,7 +212,27 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setConnected(true)
       attemptStoredSessionResume()
     }
-    const handleDisconnect = () => setConnected(false)
+    const handleDisconnect = () => {
+      setConnected(false)
+      clearPendingAutoResumeRetry()
+    }
+
+    const handleVisibilityOrOnline = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        return
+      }
+
+      if (!readStoredRoomSession()) {
+        return
+      }
+
+      if (!socket.connected) {
+        socket.connect()
+        return
+      }
+
+      attemptStoredSessionResume()
+    }
     const handleRoomState = (event: RoomStateEvent) => {
       setRoom(event.room)
       setCurrentPlayerId(event.room.currentPlayerId)
@@ -207,6 +269,8 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
     socket.on(SOCKET_EVENTS.roomState, handleRoomState)
     socket.on(SOCKET_EVENTS.roomClosed, handleRoomClosed)
     socket.on(SOCKET_EVENTS.chatMessage, handleChatMessage)
+    window.addEventListener('online', handleVisibilityOrOnline)
+    document.addEventListener('visibilitychange', handleVisibilityOrOnline)
 
     if (socket.connected) {
       handleConnect()
@@ -220,6 +284,9 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       socket.off(SOCKET_EVENTS.roomState, handleRoomState)
       socket.off(SOCKET_EVENTS.roomClosed, handleRoomClosed)
       socket.off(SOCKET_EVENTS.chatMessage, handleChatMessage)
+      window.removeEventListener('online', handleVisibilityOrOnline)
+      document.removeEventListener('visibilitychange', handleVisibilityOrOnline)
+      clearPendingAutoResumeRetry()
       socket.disconnect()
       socketRef.current = null
     }
@@ -246,7 +313,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
         }
 
         if (!response.ok) {
-          reject(new Error(response.error.message))
+          reject(new SocketAckError(response.error.message, response.error.code))
           return
         }
 
@@ -305,10 +372,13 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
       setClosedRoomCode(null)
       return response
     } catch (error) {
-      clearStoredRoomSession()
-      setRoom(null)
-      setCurrentPlayerId(null)
-      setResumeToken(null)
+      if (error instanceof SocketAckError && error.code === 'RECONNECT_EXPIRED') {
+        clearStoredRoomSession()
+        setRoom(null)
+        setCurrentPlayerId(null)
+        setResumeToken(null)
+      }
+
       throw new Error(extractErrorMessage(error))
     }
   }, [emitWithAck])

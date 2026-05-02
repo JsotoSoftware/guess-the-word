@@ -26,7 +26,7 @@ function letterKey(letter: string, disabled: boolean, state: MobileKeyboardLette
       type="button"
       disabled={disabled}
       onClick={() => onPress(letter)}
-      className={`flex h-11 min-w-0 flex-1 items-center justify-center rounded-2xl border px-1 text-lg font-black uppercase transition ${disabled ? 'cursor-not-allowed border-[#8d8aa8] bg-[#cbc2bb] text-[#7a7391] opacity-60 shadow-none' : enabledClassName}`}
+      className={`flex h-[3.15rem] min-w-0 flex-1 touch-manipulation items-center justify-center rounded-[1.15rem] border px-1 text-[1.2rem] font-black uppercase transition ${disabled ? 'cursor-not-allowed border-[#8d8aa8] bg-[#cbc2bb] text-[#7a7391] opacity-60 shadow-none' : enabledClassName}`}
     >
       {letter}
     </button>
@@ -37,16 +37,16 @@ export function MobileLetterKeyboard({ disabledLetters = [], letterStates = {}, 
   const disabledLetterSet = new Set(disabledLetters)
 
   return (
-    <div className="rounded-[28px] border border-[#6c6dd0] bg-[#4e509d] p-3 shadow-[0_16px_34px_rgba(46,33,112,0.28)] lg:hidden">
-      <div className="space-y-2.5">
+    <div className="rounded-[28px] border border-[#6c6dd0] bg-[#4e509d] p-2.5 shadow-[0_16px_34px_rgba(46,33,112,0.28)] lg:hidden">
+      <div className="space-y-2">
         {keyboardRows.map((row, rowIndex) => (
-          <div key={`row-${rowIndex}`} className="flex gap-1.5">
+          <div key={`row-${rowIndex}`} className="flex gap-1.25">
             {row.map((letter) => letterKey(letter, disabledLetterSet.has(letter), letterStates[letter] ?? 'default', onLetterPress))}
             {rowIndex === keyboardRows.length - 1 ? (
               <button
                 type="button"
                 onClick={onBackspace}
-                className="flex h-11 min-w-[84px] items-center justify-center rounded-2xl border border-[#b5653a] bg-[#d8723f] px-3 text-sm font-black uppercase text-[#2f2378] shadow-[inset_0_-3px_0_rgba(173,89,43,0.28)] transition active:translate-y-[1px] active:shadow-[inset_0_-2px_0_rgba(173,89,43,0.24)]"
+                className="flex h-[3.15rem] min-w-[78px] touch-manipulation items-center justify-center rounded-[1.15rem] border border-[#b5653a] bg-[#d8723f] px-2.5 text-[0.95rem] font-black uppercase text-[#2f2378] shadow-[inset_0_-3px_0_rgba(173,89,43,0.28)] transition active:translate-y-[1px] active:shadow-[inset_0_-2px_0_rgba(173,89,43,0.24)]"
               >
                 Borrar
               </button>
