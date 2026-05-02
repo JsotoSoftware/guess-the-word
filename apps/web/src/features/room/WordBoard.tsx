@@ -9,11 +9,14 @@ interface WordBoardProps {
 interface GuessGridRowProps {
   wordLength: number
   faded?: boolean
+  featured?: boolean
   children: ReactNode
 }
 
-function getBoardMetrics(wordLength: number) {
-  const idealSize = wordLength <= 5 ? 76 : wordLength <= 7 ? 66 : wordLength <= 9 ? 56 : 48
+function getBoardMetrics(wordLength: number, featured = false) {
+  const idealSize = featured
+    ? wordLength <= 5 ? 90 : wordLength <= 7 ? 78 : wordLength <= 9 ? 64 : 54
+    : wordLength <= 5 ? 76 : wordLength <= 7 ? 66 : wordLength <= 9 ? 56 : 48
   const gap = wordLength <= 7 ? 10 : 8
   const maxWidth = wordLength * idealSize + Math.max(wordLength - 1, 0) * gap
   const gapClass = gap === 10 ? 'gap-1.5 sm:gap-2.5' : 'gap-1 sm:gap-2'
@@ -37,8 +40,8 @@ export function getResponsiveLetterBoxClassName(wordLength: number): string {
   return 'aspect-square h-auto w-full rounded-[14px] text-[clamp(1rem,3.55vw,1.3rem)]'
 }
 
-export function GuessGridRow({ wordLength, faded = false, children }: GuessGridRowProps) {
-  const { maxWidth, gapClass } = getBoardMetrics(wordLength)
+export function GuessGridRow({ wordLength, faded = false, featured = false, children }: GuessGridRowProps) {
+  const { maxWidth, gapClass } = getBoardMetrics(wordLength, featured)
 
   return (
     <div

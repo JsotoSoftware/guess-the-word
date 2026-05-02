@@ -289,6 +289,80 @@ function getKeyboardLetterFeedbackState(guessHistory: Array<{ result: LetterResu
   }
 }
 
+function getBoardClueState(guessHistory: Array<{ result: LetterResult[] }>, wordLength: number) {
+  const confirmedPositionLetters = Array.from({ length: wordLength }, () => '')
+  const misplacedChipEntries = new Map<string, { letter: string; position: number; firstSeenGuessIndex: number }>()
+  const knownLetterCounts = new Map<string, number>()
+
+  guessHistory.forEach((guessRecord, guessIndex) => {
+    const guessKnownCounts = new Map<string, number>()
+
+    guessRecord.result.forEach((letterResult, index) => {
+      const normalizedLetter = letterResult.letter.toLowerCase()
+
+      if (letterResult.feedback === 'green') {
+        confirmedPositionLetters[index] = normalizedLetter
+        guessKnownCounts.set(normalizedLetter, (guessKnownCounts.get(normalizedLetter) ?? 0) + 1)
+        return
+      }
+
+      if (letterResult.feedback === 'yellow') {
+        guessKnownCounts.set(normalizedLetter, (guessKnownCounts.get(normalizedLetter) ?? 0) + 1)
+
+        const chipKey = `${index}:${normalizedLetter}`
+
+        if (!misplacedChipEntries.has(chipKey)) {
+          misplacedChipEntries.set(chipKey, {
+            letter: normalizedLetter,
+            position: index,
+            firstSeenGuessIndex: guessIndex,
+          })
+        }
+      }
+    })
+
+    for (const [letter, count] of guessKnownCounts.entries()) {
+      knownLetterCounts.set(letter, Math.max(knownLetterCounts.get(letter) ?? 0, count))
+    }
+  })
+
+  const resolvedLetterCounts = new Map<string, number>()
+
+  confirmedPositionLetters.forEach((letter) => {
+    if (!letter) {
+      return
+    }
+
+    resolvedLetterCounts.set(letter, (resolvedLetterCounts.get(letter) ?? 0) + 1)
+  })
+
+  const chipEntriesByLetter = new Map<string, Array<{ letter: string; position: number; firstSeenGuessIndex: number }>>()
+
+  for (const chipEntry of misplacedChipEntries.values()) {
+    const currentEntries = chipEntriesByLetter.get(chipEntry.letter) ?? []
+    currentEntries.push(chipEntry)
+    chipEntriesByLetter.set(chipEntry.letter, currentEntries)
+  }
+
+  const misplacedLettersByPosition = Array.from({ length: wordLength }, () => [] as string[])
+
+  for (const [letter, chipEntries] of chipEntriesByLetter.entries()) {
+    chipEntries.sort((left, right) => left.firstSeenGuessIndex - right.firstSeenGuessIndex || left.position - right.position)
+
+    const unresolvedCount = Math.max((knownLetterCounts.get(letter) ?? 0) - (resolvedLetterCounts.get(letter) ?? 0), 0)
+    const remainingChipEntries = chipEntries.slice(0, unresolvedCount)
+
+    for (const chipEntry of remainingChipEntries) {
+      misplacedLettersByPosition[chipEntry.position].push(chipEntry.letter)
+    }
+  }
+
+  return {
+    confirmedPositionLetters,
+    misplacedLettersByPosition,
+  }
+}
+
 function getPlacementIcon(position: number): string {
   if (position === 1) {
     return '🥇'
@@ -496,6 +570,7 @@ export function RoomPage() {
   const canSubmitGuess = pvpRound
     ? Boolean(activeRoundPlayer && !activeRoundPlayer.solved && !activeRoundPlayer.outOfAttempts)
     : Boolean(coopRound && coopRound.status === 'active')
+  const activeGuessHistory = pvpRound ? (activeRoundPlayer?.guessHistory ?? []) : (coopRound?.guessHistory ?? [])
   const isAutoSend = (pvpRound?.submissionMode ?? coopRound?.submissionMode) === 'auto_send'
   const isRowComplete = letters.length > 0 && letters.every((letter) => letter.length === 1)
   const boardIsSolved = pvpRound ? Boolean(activeRoundPlayer?.solved) : coopRound?.status === 'won'
@@ -504,9 +579,14 @@ export function RoomPage() {
   const boardMessageIcon = getBoardMessageIcon(Boolean(isAutoSend), canSubmitGuess, boardIsSolved, boardOutOfAttempts)
   const boardMessageTone = getBoardMessageTone(canSubmitGuess, boardIsSolved, boardOutOfAttempts)
   const mobileKeyboardFeedback = useMemo(
-    () => getKeyboardLetterFeedbackState(pvpRound ? (activeRoundPlayer?.guessHistory ?? []) : (coopRound?.guessHistory ?? [])),
-    [activeRoundPlayer?.guessHistory, coopRound?.guessHistory, pvpRound],
+    () => getKeyboardLetterFeedbackState(activeGuessHistory),
+    [activeGuessHistory],
   )
+  const boardClueState = useMemo(
+    () => getBoardClueState(activeGuessHistory, activeWordLength),
+    [activeGuessHistory, activeWordLength],
+  )
+  const hasMisplacedClues = boardClueState.misplacedLettersByPosition.some((lettersByPosition) => lettersByPosition.length > 0)
   const responsiveLetterBoxClassName = getResponsiveLetterBoxClassName(activeWordLength)
 
   useEffect(() => {
@@ -826,6 +906,67 @@ export function RoomPage() {
     )
   }
 
+  const boardComposer = (
+    <div className="space-y-4 rounded-[26px] border border-[#7b7ddf] bg-[#5a5db1] px-4 py-4 shadow-[0_12px_24px_rgba(46,33,112,0.2)] sm:px-5 sm:py-5">
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#dbe9ff]">Pistas visibles</p>
+          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#dbe9ff]/72">
+            {hasMisplacedClues ? 'amarillas sobre esa casilla' : 'sin amarillas aún'}
+          </span>
+        </div>
+
+        <GuessGridRow wordLength={activeWordLength} featured>
+          {boardClueState.confirmedPositionLetters.map((letter, index) => (
+            <div key={`clue-${index}`} className="flex min-w-0 flex-col justify-end gap-1.5">
+              <div className="flex min-h-[1.6rem] flex-wrap content-end justify-center gap-1.5">
+                {boardClueState.misplacedLettersByPosition[index].map((misplacedLetter) => (
+                  <span
+                    key={`misplaced-${index}-${misplacedLetter}`}
+                    className="rounded-full border border-[#bf6233] bg-[#d8723f] px-2 py-0.5 text-[11px] font-black uppercase leading-none tracking-[0.12em] text-[#2f2378]"
+                  >
+                    {misplacedLetter}
+                  </span>
+                ))}
+              </div>
+              <LetterBox
+                value={letter}
+                feedback={letter ? 'green' : undefined}
+                disabled
+                className={`${responsiveLetterBoxClassName} ${letter ? '' : 'opacity-75'}`}
+              />
+            </div>
+          ))}
+        </GuessGridRow>
+      </div>
+
+      {canSubmitGuess ? (
+        <div className="border-t border-white/12 pt-4">
+          <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.2em] text-[#fef3c7]">Tu intento actual</p>
+          <GuessGridRow wordLength={activeWordLength} featured>
+            {letters.map((letter, index) => (
+              <LetterBox
+                key={`active-${index}`}
+                value={letter}
+                autoFocus={index === 0 && activeGuessHistory.length === 0}
+                ref={(element) => {
+                  inputRefs.current[index] = element
+                }}
+                readOnly={isMobileLetterKeyboard}
+                inputMode={isMobileLetterKeyboard ? 'none' : 'text'}
+                onFocus={() => setActiveInputIndex(index)}
+                onClick={() => setActiveInputIndex(index)}
+                onChange={(value) => updateLetterAt(index, value)}
+                onKeyDown={(event) => handleBoardKeyDown(index, event)}
+                className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
+              />
+            ))}
+          </GuessGridRow>
+        </div>
+      ) : null}
+    </div>
+  )
+
   if (activeRoom && pvpRound) {
     return (
       <div className="space-y-5 pb-20 lg:pb-0">
@@ -858,42 +999,7 @@ export function RoomPage() {
               </>
             ) : null}
           >
-            {activeRoundPlayer?.guessHistory.map((guessRecord) => renderGuessRow(guessRecord.guess, guessRecord.result))}
-
-            {canSubmitGuess ? (
-              <GuessGridRow key="pvp-active-row" wordLength={pvpRound.wordLength}>
-                {letters.map((letter, index) => (
-                  <LetterBox
-                    key={`active-${index}`}
-                    value={letter}
-                    autoFocus={index === 0 && (activeRoundPlayer?.guessHistory.length ?? 0) === 0}
-                    ref={(element) => {
-                      inputRefs.current[index] = element
-                    }}
-                    readOnly={isMobileLetterKeyboard}
-                    inputMode={isMobileLetterKeyboard ? 'none' : 'text'}
-                    onFocus={() => setActiveInputIndex(index)}
-                    onClick={() => setActiveInputIndex(index)}
-                    onChange={(value) => updateLetterAt(index, value)}
-                    onKeyDown={(event) => handleBoardKeyDown(index, event)}
-                    className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
-                  />
-                ))}
-              </GuessGridRow>
-            ) : null}
-
-            {Array.from({
-              length: Math.max(
-                activeRoom.settings.attemptsPerRound - (activeRoundPlayer?.guessHistory.length ?? 0) - (canSubmitGuess ? 1 : 0),
-                0,
-              ),
-            }).map((_, rowIndex) => (
-              <GuessGridRow key={`empty-${rowIndex}`} wordLength={pvpRound.wordLength} faded>
-                {Array.from({ length: pvpRound.wordLength }).map((__, index) => (
-                  <LetterBox key={`empty-${rowIndex}-${index}`} value="" disabled className={responsiveLetterBoxClassName} />
-                ))}
-              </GuessGridRow>
-            ))}
+            {boardComposer}
           </WordBoard>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
@@ -1038,50 +1144,7 @@ export function RoomPage() {
               </>
             ) : null}
           >
-            {coopRound.guessHistory.map((guessRecord) => {
-              const sender = activeRoom.players.find((player) => player.playerId === guessRecord.submittedByPlayerId)
-
-              return (
-                <div key={`${guessRecord.guess}-${guessRecord.submittedAt}`} className="space-y-1.5">
-                  <p className="mx-auto max-w-[560px] text-left text-xs font-black uppercase tracking-[0.18em] text-slate-900/70">
-                    {sender?.nickname ?? 'Jugador'}
-                  </p>
-                  {renderGuessRow(guessRecord.guess, guessRecord.result)}
-                </div>
-              )
-            })}
-
-            {canSubmitGuess ? (
-              <GuessGridRow key="coop-active-row" wordLength={coopRound.wordLength}>
-                {letters.map((letter, index) => (
-                  <LetterBox
-                    key={`coop-active-${index}`}
-                    value={letter}
-                    autoFocus={index === 0 && coopRound.guessHistory.length === 0}
-                    ref={(element) => {
-                      inputRefs.current[index] = element
-                    }}
-                    readOnly={isMobileLetterKeyboard}
-                    inputMode={isMobileLetterKeyboard ? 'none' : 'text'}
-                    onFocus={() => setActiveInputIndex(index)}
-                    onClick={() => setActiveInputIndex(index)}
-                    onChange={(value) => updateLetterAt(index, value)}
-                    onKeyDown={(event) => handleBoardKeyDown(index, event)}
-                    className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
-                  />
-                ))}
-              </GuessGridRow>
-            ) : null}
-
-            {Array.from({
-              length: Math.max(coopRound.totalAttempts - coopRound.guessHistory.length - (canSubmitGuess ? 1 : 0), 0),
-            }).map((_, rowIndex) => (
-              <GuessGridRow key={`coop-empty-${rowIndex}`} wordLength={coopRound.wordLength} faded>
-                {Array.from({ length: coopRound.wordLength }).map((__, index) => (
-                  <LetterBox key={`coop-empty-${rowIndex}-${index}`} value="" disabled className={responsiveLetterBoxClassName} />
-                ))}
-              </GuessGridRow>
-            ))}
+            {boardComposer}
           </WordBoard>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
