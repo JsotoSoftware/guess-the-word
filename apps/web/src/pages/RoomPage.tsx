@@ -349,8 +349,16 @@ function getBoardClueState(guessHistory: Array<{ result: LetterResult[] }>, word
   for (const [letter, chipEntries] of chipEntriesByLetter.entries()) {
     chipEntries.sort((left, right) => left.firstSeenGuessIndex - right.firstSeenGuessIndex || left.position - right.position)
 
-    const unresolvedCount = Math.max((knownLetterCounts.get(letter) ?? 0) - (resolvedLetterCounts.get(letter) ?? 0), 0)
-    const remainingChipEntries = chipEntries.slice(0, unresolvedCount)
+    const knownCount = knownLetterCounts.get(letter) ?? 0
+    const resolvedCount = resolvedLetterCounts.get(letter) ?? 0
+
+    if (resolvedCount >= knownCount) {
+      continue
+    }
+
+    const remainingChipEntries = knownCount <= 1
+      ? chipEntries
+      : chipEntries.slice(0, Math.max(chipEntries.length - resolvedCount, 0))
 
     for (const chipEntry of remainingChipEntries) {
       misplacedLettersByPosition[chipEntry.position].push(chipEntry.letter)
