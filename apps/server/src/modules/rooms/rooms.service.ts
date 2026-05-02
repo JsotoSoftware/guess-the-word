@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import {
   DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
   MIN_PLAYERS_BY_MODE,
@@ -198,6 +198,7 @@ interface LiveRoom {
   activePvpRound: LivePvpRound | null
   activeCoopRound: EngineCoopRoundState | null
   coopRoundHistory: CoopCompletedRound[]
+  usedSecretWordsInMatch: string[]
 }
 
 interface CreateRoomInput {
@@ -326,6 +327,7 @@ export class RoomsService {
       activePvpRound: null,
       activeCoopRound: null,
       coopRoundHistory: [],
+      usedSecretWordsInMatch: [],
     }
 
     this.rooms.set(roomCode, room)
@@ -450,6 +452,7 @@ export class RoomsService {
 
     room.status = 'in_game'
     room.currentRoundNumber = 1
+    room.usedSecretWordsInMatch = []
     await this.startRound(room, room.currentRoundNumber)
     this.touchRoom(room)
 
@@ -509,6 +512,7 @@ export class RoomsService {
     room.roundsWon = 0
     room.roundsLost = 0
     room.coopRoundHistory = []
+    room.usedSecretWordsInMatch = []
     room.scoreboard = room.scoreboard
       .map((entry) => ({
         ...entry,
@@ -834,7 +838,7 @@ export class RoomsService {
       throw new Error('WordsService is not available.')
     }
 
-    const secretWord = await this.wordsService.getRandomSecretWord({})
+    const secretWord = await this.getSecretWordForRoom(room)
 
     if (room.settings.mode === 'pvp') {
       const roundState = this.roundStateService.createPvpRoundState(
@@ -869,6 +873,31 @@ export class RoomsService {
 
     room.status = 'in_game'
     room.currentRoundNumber = roundNumber
+  }
+
+  private async getSecretWordForRoom(room: LiveRoom) {
+    if (!this.wordsService) {
+      throw new Error('WordsService is not available.')
+    }
+
+    try {
+      const secretWord = await this.wordsService.getRandomSecretWord({
+        maxLength: room.settings.maxWordLength ?? undefined,
+        excludeWords: room.usedSecretWordsInMatch,
+      })
+      room.usedSecretWordsInMatch.push(secretWord.word)
+      return secretWord
+    } catch (error) {
+      if (!(error instanceof NotFoundException) || room.usedSecretWordsInMatch.length === 0) {
+        throw error
+      }
+
+      const secretWord = await this.wordsService.getRandomSecretWord({
+        maxLength: room.settings.maxWordLength ?? undefined,
+      })
+      room.usedSecretWordsInMatch.push(secretWord.word)
+      return secretWord
+    }
   }
 
   private isRoomWaitingOnRoundSummary(room: LiveRoom): boolean {
@@ -1556,12 +1585,21 @@ export class RoomsService {
     const maxPlayers = settings.maxPlayers === null
       ? null
       : this.ensurePositiveInteger(settings.maxPlayers, 'maxPlayers')
+    const maxWordLength = settings.maxWordLength === null
+      ? null
+      : this.ensurePositiveInteger(settings.maxWordLength, 'maxWordLength')
 
     if (maxPlayers !== null && maxPlayers < MIN_PLAYERS_BY_MODE[mode]) {
       throw new InvalidRoomSettingsError('La cantidad máxima de jugadores es incompatible con el modo seleccionado.', {
         mode,
         maxPlayers,
         minPlayersRequired: MIN_PLAYERS_BY_MODE[mode],
+      })
+    }
+
+    if (maxWordLength !== null && (maxWordLength < 4 || maxWordLength > 9)) {
+      throw new InvalidRoomSettingsError('La longitud máxima de palabra debe estar entre 4 y 9.', {
+        maxWordLength,
       })
     }
 
@@ -1572,6 +1610,7 @@ export class RoomsService {
       pvpTimerSeconds,
       submissionMode: settings.submissionMode,
       maxPlayers,
+      maxWordLength,
       roundSummaryAutoAdvanceSeconds,
     }
   }

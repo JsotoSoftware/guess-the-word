@@ -129,7 +129,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const socket = io(env.socketUrl, {
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       withCredentials: true,
     })
 
@@ -144,7 +144,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
 
       autoResumeInFlightRef.current = true
 
-      socket.timeout(5000).emit(
+      socket.timeout(10000).emit(
         SOCKET_EVENTS.sessionResume,
         storedSession,
         (timeoutError: Error | null, response?: Ack<ResumeSessionResponse>) => {
@@ -234,7 +234,7 @@ export function RoomSessionProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      socket.timeout(5000).emit(eventName, payload, (timeoutError: Error | null, response?: Ack<TResponse>) => {
+      socket.timeout(10000).emit(eventName, payload, (timeoutError: Error | null, response?: Ack<TResponse>) => {
         if (timeoutError) {
           reject(new Error('La solicitud tardó demasiado y no recibió respuesta.'))
           return

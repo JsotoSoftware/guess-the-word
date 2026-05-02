@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+COPY apps/server/package.json apps/server/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/shared/package.json packages/shared/package.json
+
+RUN npm ci
+
+COPY . .
+
+RUN npm run build --workspace @guess-the-word/server
+
+EXPOSE 2028
+
+CMD ["sh", "-c", "npm run db:migrate --workspace @guess-the-word/server && npm run start --workspace @guess-the-word/server"]

@@ -18,11 +18,12 @@ export const PVP_PLACEMENT_BONUSES: Record<number, number> = {
 }
 
 export const DEFAULT_ROOM_SETTINGS: RoomSettings = {
-  mode: 'pvp',
-  totalRounds: 5,
-  attemptsPerRound: 5,
+  mode: 'coop',
+  totalRounds: 3,
+  attemptsPerRound: 7,
   pvpTimerSeconds: 120,
-  submissionMode: 'auto_send',
-  maxPlayers: 8,
+  submissionMode: 'manual_submit',
+  maxPlayers: 4,
+  maxWordLength: 6,
   roundSummaryAutoAdvanceSeconds: DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
 }

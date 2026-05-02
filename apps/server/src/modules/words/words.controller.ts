@@ -19,6 +19,7 @@ export class WordsController {
 
   private parseFilters(query: {
     length?: string
+    maxLength?: string
     language?: string
     difficulty?: string
     category?: string
@@ -33,6 +34,16 @@ export class WordsController {
       }
 
       filters.length = parsedLength
+    }
+
+    if (query.maxLength !== undefined) {
+      const parsedMaxLength = Number(query.maxLength)
+
+      if (!Number.isInteger(parsedMaxLength) || parsedMaxLength <= 0) {
+        throw new BadRequestException('El parámetro maxLength debe ser un entero positivo.')
+      }
+
+      filters.maxLength = parsedMaxLength
     }
 
     if (query.language?.trim()) {
@@ -65,13 +76,14 @@ export class WordsController {
   @Get()
   listWords(
     @Query('length') length?: string,
+    @Query('maxLength') maxLength?: string,
     @Query('language') language?: string,
     @Query('difficulty') difficulty?: string,
     @Query('category') category?: string,
     @Query('activity') activity?: string,
   ): Promise<WordRecord[]> {
     return this.wordsService.listWords(
-      this.parseFilters({ length, language, difficulty, category }),
+      this.parseFilters({ length, maxLength, language, difficulty, category }),
       this.parseActivityState(activity),
     )
   }
@@ -91,20 +103,22 @@ export class WordsController {
   @Get('summary')
   getWordsSummary(
     @Query('length') length?: string,
+    @Query('maxLength') maxLength?: string,
     @Query('language') language?: string,
     @Query('difficulty') difficulty?: string,
     @Query('category') category?: string,
   ): Promise<WordsSummaryResponse> {
-    return this.wordsService.getWordsSummary(this.parseFilters({ length, language, difficulty, category }))
+    return this.wordsService.getWordsSummary(this.parseFilters({ length, maxLength, language, difficulty, category }))
   }
 
   @Get('random')
   getRandomWord(
     @Query('length') length?: string,
+    @Query('maxLength') maxLength?: string,
     @Query('language') language?: string,
     @Query('difficulty') difficulty?: string,
     @Query('category') category?: string,
   ): Promise<WordRecord> {
-    return this.wordsService.getRandomSecretWord(this.parseFilters({ length, language, difficulty, category }))
+    return this.wordsService.getRandomSecretWord(this.parseFilters({ length, maxLength, language, difficulty, category }))
   }
 }

@@ -1,0 +1,1414 @@
+[
+  {
+    "word": "casa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "mesa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "cama",
+    "difficulty": "facil"
+  },
+  {
+    "word": "foco",
+    "difficulty": "facil"
+  },
+  {
+    "word": "pato",
+    "difficulty": "facil"
+  },
+  {
+    "word": "rana",
+    "difficulty": "facil"
+  },
+  {
+    "word": "lobo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "gato",
+    "difficulty": "facil"
+  },
+  {
+    "word": "nube",
+    "difficulty": "facil"
+  },
+  {
+    "word": "luna",
+    "difficulty": "facil"
+  },
+  {
+    "word": "isla",
+    "difficulty": "facil"
+  },
+  {
+    "word": "roca",
+    "difficulty": "facil"
+  },
+  {
+    "word": "hoja",
+    "difficulty": "facil"
+  },
+  {
+    "word": "flor",
+    "difficulty": "facil"
+  },
+  {
+    "word": "sopa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "vaso",
+    "difficulty": "facil"
+  },
+  {
+    "word": "taza",
+    "difficulty": "facil"
+  },
+  {
+    "word": "mano",
+    "difficulty": "facil"
+  },
+  {
+    "word": "dedo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "pelo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "tren",
+    "difficulty": "facil"
+  },
+  {
+    "word": "miel",
+    "difficulty": "facil"
+  },
+  {
+    "word": "leon",
+    "difficulty": "facil"
+  },
+  {
+    "word": "moto",
+    "difficulty": "facil"
+  },
+  {
+    "word": "perro",
+    "difficulty": "facil"
+  },
+  {
+    "word": "amigo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "juego",
+    "difficulty": "facil"
+  },
+  {
+    "word": "lapiz",
+    "difficulty": "facil"
+  },
+  {
+    "word": "queso",
+    "difficulty": "facil"
+  },
+  {
+    "word": "leche",
+    "difficulty": "facil"
+  },
+  {
+    "word": "papel",
+    "difficulty": "facil"
+  },
+  {
+    "word": "coche",
+    "difficulty": "facil"
+  },
+  {
+    "word": "radio",
+    "difficulty": "facil"
+  },
+  {
+    "word": "botas",
+    "difficulty": "facil"
+  },
+  {
+    "word": "falda",
+    "difficulty": "facil"
+  },
+  {
+    "word": "playa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "fruta",
+    "difficulty": "facil"
+  },
+  {
+    "word": "dulce",
+    "difficulty": "facil"
+  },
+  {
+    "word": "hielo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "barco",
+    "difficulty": "facil"
+  },
+  {
+    "word": "globo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "helado",
+    "difficulty": "facil"
+  },
+  {
+    "word": "banana",
+    "difficulty": "facil"
+  },
+  {
+    "word": "tomate",
+    "difficulty": "facil"
+  },
+  {
+    "word": "cocina",
+    "difficulty": "facil"
+  },
+  {
+    "word": "jardin",
+    "difficulty": "facil"
+  },
+  {
+    "word": "parque",
+    "difficulty": "facil"
+  },
+  {
+    "word": "pueblo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "camara",
+    "difficulty": "facil"
+  },
+  {
+    "word": "musica",
+    "difficulty": "facil"
+  },
+  {
+    "word": "regalo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "fiesta",
+    "difficulty": "facil"
+  },
+  {
+    "word": "abrazo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "payaso",
+    "difficulty": "facil"
+  },
+  {
+    "word": "pelota",
+    "difficulty": "facil"
+  },
+  {
+    "word": "escuela",
+    "difficulty": "facil"
+  },
+  {
+    "word": "ventana",
+    "difficulty": "facil"
+  },
+  {
+    "word": "familia",
+    "difficulty": "facil"
+  },
+  {
+    "word": "mochila",
+    "difficulty": "facil"
+  },
+  {
+    "word": "galleta",
+    "difficulty": "facil"
+  },
+  {
+    "word": "naranja",
+    "difficulty": "facil"
+  },
+  {
+    "word": "cebolla",
+    "difficulty": "facil"
+  },
+  {
+    "word": "sonrisa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "gigante",
+    "difficulty": "facil"
+  },
+  {
+    "word": "semilla",
+    "difficulty": "facil"
+  },
+  {
+    "word": "espejo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "elefante",
+    "difficulty": "facil"
+  },
+  {
+    "word": "mariposa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "guitarra",
+    "difficulty": "facil"
+  },
+  {
+    "word": "cuaderno",
+    "difficulty": "facil"
+  },
+  {
+    "word": "castillo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "estrella",
+    "difficulty": "facil"
+  },
+  {
+    "word": "reloj",
+    "difficulty": "media"
+  },
+  {
+    "word": "oveja",
+    "difficulty": "media"
+  },
+  {
+    "word": "bosque",
+    "difficulty": "media"
+  },
+  {
+    "word": "puente",
+    "difficulty": "media"
+  },
+  {
+    "word": "corona",
+    "difficulty": "media"
+  },
+  {
+    "word": "fuente",
+    "difficulty": "media"
+  },
+  {
+    "word": "planeta",
+    "difficulty": "media"
+  },
+  {
+    "word": "tortuga",
+    "difficulty": "media"
+  },
+  {
+    "word": "ardilla",
+    "difficulty": "media"
+  },
+  {
+    "word": "colegio",
+    "difficulty": "media"
+  },
+  {
+    "word": "oficina",
+    "difficulty": "media"
+  },
+  {
+    "word": "domingo",
+    "difficulty": "media"
+  },
+  {
+    "word": "febrero",
+    "difficulty": "media"
+  },
+  {
+    "word": "agosto",
+    "difficulty": "media"
+  },
+  {
+    "word": "verano",
+    "difficulty": "media"
+  },
+  {
+    "word": "volcan",
+    "difficulty": "media"
+  },
+  {
+    "word": "oceano",
+    "difficulty": "media"
+  },
+  {
+    "word": "cometa",
+    "difficulty": "media"
+  },
+  {
+    "word": "pirata",
+    "difficulty": "media"
+  },
+  {
+    "word": "tesoro",
+    "difficulty": "media"
+  },
+  {
+    "word": "conejo",
+    "difficulty": "media"
+  },
+  {
+    "word": "jirafa",
+    "difficulty": "media"
+  },
+  {
+    "word": "caballo",
+    "difficulty": "media"
+  },
+  {
+    "word": "durazno",
+    "difficulty": "media"
+  },
+  {
+    "word": "pepino",
+    "difficulty": "media"
+  },
+  {
+    "word": "lechuga",
+    "difficulty": "media"
+  },
+  {
+    "word": "canasta",
+    "difficulty": "media"
+  },
+  {
+    "word": "tablero",
+    "difficulty": "media"
+  },
+  {
+    "word": "pecera",
+    "difficulty": "media"
+  },
+  {
+    "word": "fogata",
+    "difficulty": "media"
+  },
+  {
+    "word": "molino",
+    "difficulty": "media"
+  },
+  {
+    "word": "anillo",
+    "difficulty": "media"
+  },
+  {
+    "word": "collar",
+    "difficulty": "media"
+  },
+  {
+    "word": "domino",
+    "difficulty": "media"
+  },
+  {
+    "word": "ajedrez",
+    "difficulty": "media"
+  },
+  {
+    "word": "teclado",
+    "difficulty": "media"
+  },
+  {
+    "word": "monitor",
+    "difficulty": "media"
+  },
+  {
+    "word": "libreta",
+    "difficulty": "media"
+  },
+  {
+    "word": "noticia",
+    "difficulty": "media"
+  },
+  {
+    "word": "pintura",
+    "difficulty": "media"
+  },
+  {
+    "word": "sendero",
+    "difficulty": "media"
+  },
+  {
+    "word": "invierno",
+    "difficulty": "media"
+  },
+  {
+    "word": "tormenta",
+    "difficulty": "media"
+  },
+  {
+    "word": "arcoiris",
+    "difficulty": "media"
+  },
+  {
+    "word": "piramide",
+    "difficulty": "media"
+  },
+  {
+    "word": "desierto",
+    "difficulty": "media"
+  },
+  {
+    "word": "galaxia",
+    "difficulty": "media"
+  },
+  {
+    "word": "satelite",
+    "difficulty": "media"
+  },
+  {
+    "word": "avioneta",
+    "difficulty": "media"
+  },
+  {
+    "word": "bufanda",
+    "difficulty": "media"
+  },
+  {
+    "word": "zapatos",
+    "difficulty": "media"
+  },
+  {
+    "word": "granero",
+    "difficulty": "media"
+  },
+  {
+    "word": "cascada",
+    "difficulty": "media"
+  },
+  {
+    "word": "palmera",
+    "difficulty": "media"
+  },
+  {
+    "word": "pollito",
+    "difficulty": "media"
+  },
+  {
+    "word": "avellana",
+    "difficulty": "media"
+  },
+  {
+    "word": "ciruela",
+    "difficulty": "media"
+  },
+  {
+    "word": "frambuesa",
+    "difficulty": "media"
+  },
+  {
+    "word": "zanahoria",
+    "difficulty": "media"
+  },
+  {
+    "word": "espinaca",
+    "difficulty": "media"
+  },
+  {
+    "word": "almendra",
+    "difficulty": "media"
+  },
+  {
+    "word": "chimenea",
+    "difficulty": "media"
+  },
+  {
+    "word": "vecindad",
+    "difficulty": "media"
+  },
+  {
+    "word": "carreta",
+    "difficulty": "media"
+  },
+  {
+    "word": "pulsera",
+    "difficulty": "media"
+  },
+  {
+    "word": "brilloso",
+    "difficulty": "media"
+  },
+  {
+    "word": "silencio",
+    "difficulty": "media"
+  },
+  {
+    "word": "susurro",
+    "difficulty": "media"
+  },
+  {
+    "word": "campana",
+    "difficulty": "media"
+  },
+  {
+    "word": "triangulo",
+    "difficulty": "media"
+  },
+  {
+    "word": "cuadrado",
+    "difficulty": "media"
+  },
+  {
+    "word": "circulo",
+    "difficulty": "media"
+  },
+  {
+    "word": "relampago",
+    "difficulty": "media"
+  },
+  {
+    "word": "abismo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "aurora",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "cabina",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "flauta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "jazmin",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "trebol",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "eclipse",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "culebra",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "glaciar",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "iceberg",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "insecto",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "melodia",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "muralla",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "oraculo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "pantera",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "plumaje",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "refugio",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "retablo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "silueta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "vitrina",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "zepelin",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "altavoz",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "anemona",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "brujula",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "candado",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "columna",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "disfraz",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "fabrica",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "fragata",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "girasol",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "pelicano",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "tempestad",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "universo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "ventisca",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "xilofono",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "acertijo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "acuarela",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "alfombra",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "alquimia",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "antorcha",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "armadura",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "balancin",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "bastidor",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "calabaza",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "caracola",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "catalejo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "catedral",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "centella",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "diamante",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "escalera",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "espectro",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "fantasma",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "frontera",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "guardian",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "herreria",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "imprenta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "incendio",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "linterna",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "mazmorra",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "misterio",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "nebulosa",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "orquesta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "paraguas",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "pedestal",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "persiana",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "remolino",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "sombrero",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "travesia",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "trompeta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "vendaval",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "asteroide",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "berenjena",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "cerbatana",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "crisalida",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "escarlata",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "esmeralda",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "hipotesis",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "laberinto",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "lagartija",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "manantial",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "meteorito",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "nectarina",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "pentagono",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "pergamino",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "porcelana",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "serpiente",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "trinchera",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "brillante",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "arbol",
+    "difficulty": "facil"
+  },
+  {
+    "word": "silla",
+    "difficulty": "facil"
+  },
+  {
+    "word": "llave",
+    "difficulty": "facil"
+  },
+  {
+    "word": "carta",
+    "difficulty": "facil"
+  },
+  {
+    "word": "suelo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "techo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "nariz",
+    "difficulty": "facil"
+  },
+  {
+    "word": "oreja",
+    "difficulty": "facil"
+  },
+  {
+    "word": "brazo",
+    "difficulty": "facil"
+  },
+  {
+    "word": "pierna",
+    "difficulty": "facil"
+  },
+  {
+    "word": "diente",
+    "difficulty": "facil"
+  },
+  {
+    "word": "frente",
+    "difficulty": "facil"
+  },
+  {
+    "word": "camisa",
+    "difficulty": "facil"
+  },
+  {
+    "word": "puerta",
+    "difficulty": "facil"
+  },
+  {
+    "word": "piedra",
+    "difficulty": "facil"
+  },
+  {
+    "word": "calor",
+    "difficulty": "facil"
+  },
+  {
+    "word": "frio",
+    "difficulty": "facil"
+  },
+  {
+    "word": "salto",
+    "difficulty": "facil"
+  },
+  {
+    "word": "nadar",
+    "difficulty": "facil"
+  },
+  {
+    "word": "zapato",
+    "difficulty": "facil"
+  },
+  {
+    "word": "abeja",
+    "difficulty": "media"
+  },
+  {
+    "word": "aguila",
+    "difficulty": "media"
+  },
+  {
+    "word": "aldea",
+    "difficulty": "media"
+  },
+  {
+    "word": "alfiler",
+    "difficulty": "media"
+  },
+  {
+    "word": "camino",
+    "difficulty": "media"
+  },
+  {
+    "word": "caracol",
+    "difficulty": "media"
+  },
+  {
+    "word": "camello",
+    "difficulty": "media"
+  },
+  {
+    "word": "cereza",
+    "difficulty": "media"
+  },
+  {
+    "word": "acuario",
+    "difficulty": "media"
+  },
+  {
+    "word": "bateria",
+    "difficulty": "media"
+  },
+  {
+    "word": "bicicleta",
+    "difficulty": "media"
+  },
+  {
+    "word": "cabecera",
+    "difficulty": "media"
+  },
+  {
+    "word": "callejon",
+    "difficulty": "media"
+  },
+  {
+    "word": "carpeta",
+    "difficulty": "media"
+  },
+  {
+    "word": "cortina",
+    "difficulty": "media"
+  },
+  {
+    "word": "martillo",
+    "difficulty": "media"
+  },
+  {
+    "word": "maleta",
+    "difficulty": "media"
+  },
+  {
+    "word": "maletin",
+    "difficulty": "media"
+  },
+  {
+    "word": "sandalia",
+    "difficulty": "media"
+  },
+  {
+    "word": "sombrilla",
+    "difficulty": "media"
+  },
+  {
+    "word": "tractor",
+    "difficulty": "media"
+  },
+  {
+    "word": "montana",
+    "difficulty": "media"
+  },
+  {
+    "word": "medalla",
+    "difficulty": "media"
+  },
+  {
+    "word": "palacio",
+    "difficulty": "media"
+  },
+  {
+    "word": "botella",
+    "difficulty": "media"
+  },
+  {
+    "word": "gimnasio",
+    "difficulty": "media"
+  },
+  {
+    "word": "hormiga",
+    "difficulty": "media"
+  },
+  {
+    "word": "laguna",
+    "difficulty": "media"
+  },
+  {
+    "word": "tiburon",
+    "difficulty": "media"
+  },
+  {
+    "word": "delfin",
+    "difficulty": "media"
+  },
+  {
+    "word": "castor",
+    "difficulty": "media"
+  },
+  {
+    "word": "bruja",
+    "difficulty": "media"
+  },
+  {
+    "word": "cohete",
+    "difficulty": "media"
+  },
+  {
+    "word": "sirena",
+    "difficulty": "media"
+  },
+  {
+    "word": "dragon",
+    "difficulty": "media"
+  },
+  {
+    "word": "duende",
+    "difficulty": "media"
+  },
+  {
+    "word": "cartero",
+    "difficulty": "media"
+  },
+  {
+    "word": "ventanal",
+    "difficulty": "media"
+  },
+  {
+    "word": "pasillo",
+    "difficulty": "media"
+  },
+  {
+    "word": "esquina",
+    "difficulty": "media"
+  },
+  {
+    "word": "colchon",
+    "difficulty": "media"
+  },
+  {
+    "word": "cerebro",
+    "difficulty": "media"
+  },
+  {
+    "word": "cosecha",
+    "difficulty": "media"
+  },
+  {
+    "word": "granito",
+    "difficulty": "media"
+  },
+  {
+    "word": "mineral",
+    "difficulty": "media"
+  },
+  {
+    "word": "juguete",
+    "difficulty": "media"
+  },
+  {
+    "word": "maquina",
+    "difficulty": "media"
+  },
+  {
+    "word": "palanca",
+    "difficulty": "media"
+  },
+  {
+    "word": "peluche",
+    "difficulty": "media"
+  },
+  {
+    "word": "refresco",
+    "difficulty": "media"
+  },
+  {
+    "word": "sandia",
+    "difficulty": "media"
+  },
+  {
+    "word": "tijeras",
+    "difficulty": "media"
+  },
+  {
+    "word": "vecino",
+    "difficulty": "media"
+  },
+  {
+    "word": "zanja",
+    "difficulty": "media"
+  },
+  {
+    "word": "avion",
+    "difficulty": "media"
+  },
+  {
+    "word": "camion",
+    "difficulty": "media"
+  },
+  {
+    "word": "carrito",
+    "difficulty": "media"
+  },
+  {
+    "word": "cinturon",
+    "difficulty": "media"
+  },
+  {
+    "word": "alfajor",
+    "difficulty": "media"
+  },
+  {
+    "word": "palomita",
+    "difficulty": "media"
+  },
+  {
+    "word": "pizarra",
+    "difficulty": "media"
+  },
+  {
+    "word": "postre",
+    "difficulty": "media"
+  },
+  {
+    "word": "receta",
+    "difficulty": "media"
+  },
+  {
+    "word": "sarten",
+    "difficulty": "media"
+  },
+  {
+    "word": "tetera",
+    "difficulty": "media"
+  },
+  {
+    "word": "bodega",
+    "difficulty": "media"
+  },
+  {
+    "word": "safari",
+    "difficulty": "media"
+  },
+  {
+    "word": "selva",
+    "difficulty": "media"
+  },
+  {
+    "word": "cueva",
+    "difficulty": "media"
+  },
+  {
+    "word": "pradera",
+    "difficulty": "media"
+  },
+  {
+    "word": "ribera",
+    "difficulty": "media"
+  },
+  {
+    "word": "caverna",
+    "difficulty": "media"
+  },
+  {
+    "word": "acueducto",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "alambique",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "algoritmo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "alpinista",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "anaconda",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "bumeran",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "catapulta",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "ciclope",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "corsario",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "cromatico",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "ecuacion",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "enjambre",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "epopeya",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "filamento",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "jabalina",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "mandarina",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "monolito",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "obelisco",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "origami",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "parabola",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "paradoja",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "quimera",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "tragaluz",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "tridente",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "utensilio",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "valquiria",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "vocabulo",
+    "difficulty": "dificil"
+  },
+  {
+    "word": "zigurat",
+    "difficulty": "dificil"
+  }
+]

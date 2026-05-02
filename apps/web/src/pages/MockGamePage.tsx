@@ -152,8 +152,8 @@ export function MockGamePage() {
               </span>
             </div>
 
-            <div className="rounded-[28px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)]">
-              <div className="rounded-[22px] border-[4px] border-[#3048a8] bg-[#88b7ff] p-3 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)]">
+            <div className="rounded-[28px] border border-[#4160cd] bg-gradient-to-b from-[#69adff] via-[#5098ff] to-[#3879ec] p-1.5 shadow-[0_18px_40px_rgba(30,64,175,0.35)] sm:rounded-[32px] sm:border-[5px] sm:border-[#4659ba] sm:from-[#7cb3ff] sm:via-[#66a7ff] sm:to-[#4d87ef] sm:p-5">
+              <div className="rounded-[20px] border border-[#294cb8] bg-[#7eb1ff] p-1 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)] sm:rounded-[24px] sm:border-[4px] sm:border-[#3048a8] sm:bg-[#88b7ff] sm:p-5">
                 <div className="space-y-2.5">
                   {guesses.map((row, rowIndex) => (
                     <div key={`${row.guess}-${rowIndex}`} className="flex flex-wrap gap-2.5">

@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { NotFoundException } from '@nestjs/common'
 import { DEFAULT_ROOM_SETTINGS, PVP_BASE_POINTS, PVP_PLACEMENT_BONUSES } from '@guess-the-word/shared'
 import {
   GuessAlreadySubmittedError,
@@ -11,21 +12,46 @@ import {
   StartNotAllowedError,
 } from './rooms.service'
 
-function createServiceWithWord(word = 'queso') {
+function createServiceWithWords(words: string[]) {
   return new RoomsService({
-    async getRandomSecretWord() {
+    async getRandomSecretWord(filters?: { length?: number; maxLength?: number; excludeWords?: string[] }) {
+      const excludedWords = new Set(filters?.excludeWords ?? [])
+      const selectedWord = words.find((word) => {
+        if (excludedWords.has(word)) {
+          return false
+        }
+
+        if (typeof filters?.length === 'number' && word.length !== filters.length) {
+          return false
+        }
+
+        if (typeof filters?.maxLength === 'number' && word.length > filters.maxLength) {
+          return false
+        }
+
+        return true
+      })
+
+      if (!selectedWord) {
+        throw new NotFoundException('No se encontró una palabra disponible para los filtros solicitados.')
+      }
+
       return {
-        id: 'word-1',
-        word,
+        id: `word-${selectedWord}`,
+        word: selectedWord,
         language: 'spanish',
         difficulty: null,
         category: null,
-        length: word.length,
+        length: selectedWord.length,
         is_active: true,
         created_at: '2026-01-01T00:00:00.000Z',
       }
     },
   } as never)
+}
+
+function createServiceWithWord(word = 'queso') {
+  return createServiceWithWords([word])
 }
 
 function forceGeneratedRoomCode(service: RoomsService, roomCode: string) {
@@ -68,6 +94,20 @@ test('crear una sala devuelve el host y conserva la configuración elegida', () 
   assert.equal(response.room.settings.submissionMode, 'manual_submit')
   assert.equal(response.room.settings.pvpTimerSeconds, 90)
   assert.equal(response.room.settings.maxPlayers, 6)
+})
+
+test('conserva la longitud máxima de palabra elegida al crear una sala', () => {
+  const service = new RoomsService()
+  const response = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      maxWordLength: 6,
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.settings.maxWordLength, 6)
 })
 
 test('permite que otro cliente se una a una sala válida', () => {
@@ -827,6 +867,34 @@ test('en cooperativo agotar los intentos marca derrota y actualiza roundsLost', 
   assert.equal('scoreboard' in snapshot.summary, false)
 })
 
+test('la sala respeta la longitud máxima configurada al elegir palabras', async () => {
+  const service = createServiceWithWords(['bosque', 'mariposa'])
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      maxWordLength: 6,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  const response = await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.viewState, 'round_active')
+  assert.equal(response.room.round.wordLength, 6)
+})
+
 test('al iniciar una ronda PVP se elige una palabra y todos entran a la misma ronda activa', async () => {
   const service = createServiceWithWord('queso')
   const createdRoom = service.createRoom({
@@ -1310,6 +1378,110 @@ test('el host puede continuar desde el summary y la siguiente ronda reinicia sol
   assert.equal(response.room.round.scoreboard.find((entry) => entry.nickname === 'Ana')?.totalPoints, PVP_BASE_POINTS + PVP_PLACEMENT_BONUSES[1])
   assert.equal(response.room.round.players.every((player) => player.guessHistory.length === 0), true)
   assert.equal(response.room.round.players.every((player) => player.attemptsLeft === 1), true)
+})
+
+test('evita repetir palabras dentro de una misma partida cuando hay alternativas disponibles', async () => {
+  const service = createServiceWithWords(['queso', 'perro'])
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 2,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'gatos' })
+
+  const response = await service.continueRound({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.viewState, 'round_active')
+
+  if (response.room.viewState !== 'round_active' || response.room.round.mode !== 'pvp') {
+    throw new Error('Expected an active PVP round snapshot.')
+  }
+
+  assert.equal(response.room.round.wordLength, 5)
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'perro' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'queso' })
+
+  const summarySnapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (summarySnapshot.viewState !== 'round_summary' || summarySnapshot.summary.mode !== 'pvp') {
+    throw new Error('Expected a PVP round summary snapshot.')
+  }
+
+  assert.equal(summarySnapshot.summary.secretWord, 'perro')
+})
+
+test('si se agotan las palabras únicas disponibles, la partida puede continuar reutilizando una', async () => {
+  const service = createServiceWithWord('queso')
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      totalRounds: 2,
+      attemptsPerRound: 1,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'gatos' })
+
+  const response = await service.continueRound({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.viewState, 'round_active')
+
+  if (response.room.viewState !== 'round_active' || response.room.round.mode !== 'pvp') {
+    throw new Error('Expected an active PVP round snapshot.')
+  }
+
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host', guess: 'queso' })
+  service.submitGuess({ roomCode: createdRoom.room.roomCode, socketId: 'socket-guest', guess: 'gatos' })
+
+  const summarySnapshot = service.getRoomStateTargets(createdRoom.room.roomCode)[0].room
+
+  if (summarySnapshot.viewState !== 'round_summary' || summarySnapshot.summary.mode !== 'pvp') {
+    throw new Error('Expected a PVP round summary snapshot.')
+  }
+
+  assert.equal(summarySnapshot.summary.secretWord, 'queso')
 })
 
 test('el autoavance del summary inicia la siguiente ronda cuando no era la última', async () => {

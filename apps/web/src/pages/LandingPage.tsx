@@ -13,6 +13,7 @@ interface CreateRoomFormState {
   pvpTimerSeconds: string
   submissionMode: GuessSubmissionMode
   maxPlayers: string
+  maxWordLength: string
 }
 
 interface JoinRoomFormState {
@@ -28,6 +29,7 @@ const initialCreateRoomForm: CreateRoomFormState = {
   pvpTimerSeconds: String(DEFAULT_ROOM_SETTINGS.pvpTimerSeconds ?? ''),
   submissionMode: DEFAULT_ROOM_SETTINGS.submissionMode,
   maxPlayers: String(DEFAULT_ROOM_SETTINGS.maxPlayers ?? ''),
+  maxWordLength: String(DEFAULT_ROOM_SETTINGS.maxWordLength ?? ''),
 }
 
 const initialJoinRoomForm: JoinRoomFormState = {
@@ -53,6 +55,7 @@ function buildRoomSettings(form: CreateRoomFormState): RoomSettings {
     pvpTimerSeconds: form.mode === 'pvp' ? parseOptionalPositiveInteger(form.pvpTimerSeconds) : null,
     submissionMode: form.submissionMode,
     maxPlayers: parseOptionalPositiveInteger(form.maxPlayers),
+    maxWordLength: parseOptionalPositiveInteger(form.maxWordLength),
     roundSummaryAutoAdvanceSeconds: DEFAULT_ROOM_SETTINGS.roundSummaryAutoAdvanceSeconds,
   }
 }
@@ -296,6 +299,24 @@ export function LandingPage() {
                       />
                     </label>
                   </div>
+
+                  <label className="block space-y-2">
+                    <span className="font-medium text-white">Longitud máxima de palabra</span>
+                    <select
+                      name="maxWordLength"
+                      value={createRoomForm.maxWordLength}
+                      onChange={handleCreateRoomChange}
+                      className={inputClassName}
+                    >
+                      <option value="">Cualquiera</option>
+                      <option value="4">Hasta 4 letras</option>
+                      <option value="5">Hasta 5 letras</option>
+                      <option value="6">Hasta 6 letras</option>
+                      <option value="7">Hasta 7 letras</option>
+                      <option value="8">Hasta 8 letras</option>
+                      <option value="9">Hasta 9 letras</option>
+                    </select>
+                  </label>
 
                   {createRoomForm.mode === 'pvp' ? (
                     <label className="block space-y-2">

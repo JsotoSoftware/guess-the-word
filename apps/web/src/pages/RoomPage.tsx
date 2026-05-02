@@ -29,6 +29,7 @@ interface LobbySettingsFormState {
   pvpTimerSeconds: string
   submissionMode: GuessSubmissionMode
   maxPlayers: string
+  maxWordLength: string
 }
 
 function toSettingsFormState(settings: RoomSettings): LobbySettingsFormState {
@@ -39,6 +40,7 @@ function toSettingsFormState(settings: RoomSettings): LobbySettingsFormState {
     pvpTimerSeconds: settings.pvpTimerSeconds === null ? '' : String(settings.pvpTimerSeconds),
     submissionMode: settings.submissionMode,
     maxPlayers: settings.maxPlayers === null ? '' : String(settings.maxPlayers),
+    maxWordLength: settings.maxWordLength === null ? '' : String(settings.maxWordLength),
   }
 }
 
@@ -60,6 +62,7 @@ function buildRoomSettings(form: LobbySettingsFormState, room: LobbyRoomSnapshot
     pvpTimerSeconds: form.mode === 'pvp' ? parseOptionalPositiveInteger(form.pvpTimerSeconds) : null,
     submissionMode: form.submissionMode,
     maxPlayers: parseOptionalPositiveInteger(form.maxPlayers),
+    maxWordLength: parseOptionalPositiveInteger(form.maxWordLength),
     roundSummaryAutoAdvanceSeconds: room.settings.roundSummaryAutoAdvanceSeconds,
   }
 }
@@ -178,14 +181,14 @@ function GameStatCard({ icon, label, value, helper, tone = 'blue' }: GameStatCar
   const toneClasses = gameStatToneClasses[tone]
 
   return (
-    <div className={`rounded-[28px] border px-4 py-4 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)] ${toneClasses.shell}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className={`min-w-0 rounded-[28px] border px-4 py-4 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)] ${toneClasses.shell}`}>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">{label}</p>
-          <p className={`mt-3 text-3xl font-black tracking-tight sm:text-[2.1rem] ${toneClasses.value}`}>{value}</p>
-          {helper ? <p className={`mt-1 text-sm font-semibold ${toneClasses.helper}`}>{helper}</p> : null}
+          <p className={`mt-3 text-[clamp(1.4rem,1.95vw,1.85rem)] font-black leading-[1.02] tracking-tight ${toneClasses.value}`}>{value}</p>
+          {helper ? <p className={`mt-1 text-sm font-semibold leading-5 ${toneClasses.helper}`}>{helper}</p> : null}
         </div>
-        <span className={`flex h-12 w-12 items-center justify-center rounded-2xl border text-2xl ${toneClasses.icon}`}>{icon}</span>
+        <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl ${toneClasses.icon}`}>{icon}</span>
       </div>
     </div>
   )
@@ -203,11 +206,11 @@ function GameStatusBanner({ icon, title, message, tone = 'blue' }: GameStatusBan
 
   return (
     <div className={`rounded-[28px] border px-4 py-4 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)] ${toneClasses.shell}`}>
-      <div className="flex items-start gap-3">
+      <div className="flex min-w-0 items-start gap-3">
         <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border text-2xl ${toneClasses.icon}`}>{icon}</span>
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-white/70">{title}</p>
-          <p className={`mt-2 text-lg font-black tracking-tight ${toneClasses.value}`}>{message}</p>
+          <p className={`mt-2 break-words text-lg font-black tracking-tight ${toneClasses.value}`}>{message}</p>
         </div>
       </div>
     </div>
@@ -385,6 +388,7 @@ export function RoomPage() {
     ? pvpRound.scoreboard.findIndex((entry) => entry.playerId === currentPvpScoreEntry.playerId) + 1
     : null
   const activeWordLength = pvpRound?.wordLength ?? coopRound?.wordLength ?? 0
+  const activeRoundKey = activeRoom ? `${activeRoom.roomCode}:${activeRoom.currentRoundNumber}:${activeRoom.round.mode}:${activeWordLength}` : null
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
   const [letters, setLetters] = useState<string[]>(() => createEmptyLetters(activeWordLength))
 
@@ -416,29 +420,14 @@ export function RoomPage() {
   }, [pvpRound, summaryRoom])
 
   useEffect(() => {
-    if (pvpRound && activeRoundPlayer) {
-      setLetters(createEmptyLetters(pvpRound.wordLength))
-      setIsSubmittingGuess(false)
-      requestAnimationFrame(() => inputRefs.current[0]?.focus())
+    if (!activeRoundKey || !activeWordLength) {
       return
     }
 
-    if (coopRound) {
-      setLetters(createEmptyLetters(coopRound.wordLength))
-      setIsSubmittingGuess(false)
-      requestAnimationFrame(() => inputRefs.current[0]?.focus())
-    }
-  }, [
-    activeRoundPlayer?.guessHistory.length,
-    activeRoundPlayer?.attemptsLeft,
-    activeRoundPlayer?.solved,
-    activeRoundPlayer?.outOfAttempts,
-    coopRound?.guessHistory.length,
-    coopRound?.attemptsLeft,
-    coopRound?.status,
-    pvpRound,
-    coopRound,
-  ])
+    setLetters(createEmptyLetters(activeWordLength))
+    setIsSubmittingGuess(false)
+    requestAnimationFrame(() => inputRefs.current[0]?.focus())
+  }, [activeRoundKey, activeWordLength])
 
   useEffect(() => {
     if (!isDesktopChat) {
@@ -613,6 +602,10 @@ export function RoomPage() {
         guess: letters.join(''),
       })
 
+      setLetters(createEmptyLetters(activeWordLength))
+      setIsSubmittingGuess(false)
+      requestAnimationFrame(() => inputRefs.current[0]?.focus())
+
       if (!triggeredAutomatically) {
         setActionMessage('Intento enviado.')
       }
@@ -756,7 +749,7 @@ export function RoomPage() {
   if (activeRoom && pvpRound) {
     return (
       <div className="space-y-5 pb-20 lg:pb-0">
-        <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-4 shadow-glow sm:p-6">
+        <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
           <WordBoard
             timerLabel={pvpRound.timer.enabled ? activeTimerLabel : null}
             footer={!isAutoSend ? (
@@ -773,7 +766,7 @@ export function RoomPage() {
             {activeRoundPlayer?.guessHistory.map((guessRecord) => renderGuessRow(guessRecord.guess, guessRecord.result))}
 
             {canSubmitGuess ? (
-              <GuessGridRow wordLength={pvpRound.wordLength}>
+              <GuessGridRow key="pvp-active-row" wordLength={pvpRound.wordLength}>
                 {letters.map((letter, index) => (
                   <LetterBox
                     key={`active-${index}`}
@@ -804,7 +797,7 @@ export function RoomPage() {
             ))}
           </WordBoard>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <GameStatCard icon="🎯" label="Intentos" value={String(activeRoundPlayer?.attemptsLeft ?? 0)} helper="restantes" tone="amber" />
             <GameStatCard
               icon="⏱️"
@@ -847,7 +840,7 @@ export function RoomPage() {
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-5">
             <RoomPanel title="🎮 Panel de juego" description="Todo lo necesario sin llenar la pantalla de texto.">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                 <GameStatCard icon="🔤" label="Letras" value={String(pvpRound.wordLength)} helper="en la palabra" tone="violet" />
                 <GameStatCard icon="⚡" label="Envío" value={isAutoSend ? 'Auto' : 'Manual'} helper={isAutoSend ? 'al completar fila' : 'usa el botón'} tone="blue" />
                 <GameStatCard icon="🏟️" label="Sala" value={activeRoom.roomCode} helper={`${activeRoom.players.length} jugando`} tone="amber" />
@@ -918,7 +911,7 @@ export function RoomPage() {
   if (activeRoom && coopRound) {
     return (
       <div className="space-y-5 pb-20 lg:pb-0">
-        <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-4 shadow-glow sm:p-6">
+        <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
           <WordBoard
             footer={!isAutoSend ? (
               <button
@@ -945,7 +938,7 @@ export function RoomPage() {
             })}
 
             {canSubmitGuess ? (
-              <GuessGridRow wordLength={coopRound.wordLength}>
+              <GuessGridRow key="coop-active-row" wordLength={coopRound.wordLength}>
                 {letters.map((letter, index) => (
                   <LetterBox
                     key={`coop-active-${index}`}
@@ -973,7 +966,7 @@ export function RoomPage() {
             ))}
           </WordBoard>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <GameStatCard icon="🎯" label="Intentos" value={String(coopRound.attemptsLeft)} helper="del equipo" tone="amber" />
             <GameStatCard icon="🏁" label="Ronda" value={`${activeRoom.currentRoundNumber}/${activeRoom.totalRounds}`} helper="progreso" tone="violet" />
             <GameStatCard icon="✨" label="Aciertos" value={String(coopRound.roundsWon)} helper="rondas ganadas" tone="emerald" />
@@ -1026,7 +1019,7 @@ export function RoomPage() {
             </RoomPanel>
 
             <RoomPanel title="📊 Estado rápido" description="Lectura simple para seguir la partida sin distraerse.">
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
                 <GameStatCard icon="🔤" label="Letras" value={String(coopRound.wordLength)} helper="en la palabra" tone="violet" />
                 <GameStatCard icon="⚡" label="Envío" value={isAutoSend ? 'Auto' : 'Manual'} helper={isAutoSend ? 'al completar fila' : 'usa el botón'} tone="blue" />
                 <GameStatCard icon="❤️" label="Fallos" value={String(coopRound.roundsLost)} helper="rondas perdidas" tone="rose" />

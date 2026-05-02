@@ -11,7 +11,8 @@ import { WordsModule } from './modules/words/words.module'
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      ignoreEnvFile: process.env.NODE_ENV === 'production',
+      envFilePath: ['apps/server/.env', '.env'],
     }),
     AppConfigModule,
     DatabaseModule,

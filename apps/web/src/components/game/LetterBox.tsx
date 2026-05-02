@@ -15,9 +15,9 @@ interface LetterBoxProps {
 }
 
 const feedbackClasses: Record<LetterFeedback, string> = {
-  green: 'border-emerald-600 bg-emerald-300 text-emerald-950 shadow-[inset_0_-4px_0_rgba(6,78,59,0.25)]',
-  yellow: 'border-amber-500 bg-amber-300 text-amber-950 shadow-[inset_0_-4px_0_rgba(146,64,14,0.25)]',
-  red: 'border-rose-600 bg-rose-300 text-rose-950 shadow-[inset_0_-4px_0_rgba(136,19,55,0.22)]',
+  green: 'border-[#6fa7e8] bg-[#87bdf9] text-[#2f2378] shadow-[inset_0_-4px_0_rgba(64,108,194,0.3)]',
+  yellow: 'border-[#bf6233] bg-[#d8723f] text-[#2f2378] shadow-[inset_0_-4px_0_rgba(173,89,43,0.28)]',
+  red: 'border-[#cdbab0] bg-gradient-to-b from-[#f5ede6] to-[#decfc4] text-[#43338b] shadow-[inset_0_-4px_0_rgba(194,163,150,0.42)]',
 }
 
 export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function LetterBox(
@@ -27,8 +27,8 @@ export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function L
   const colorClass = feedback
     ? feedbackClasses[feedback]
     : value.trim().length > 0
-      ? 'border-[#5f64c7] bg-[#ffd0c4] text-[#3e3b8f] shadow-[inset_0_-4px_0_rgba(190,113,122,0.32)]'
-      : 'border-[#5360be] bg-[#fff4e7] text-[#4b4f98] shadow-[inset_0_-4px_0_rgba(216,197,172,0.7)]'
+      ? 'border-[#8b78d8] bg-gradient-to-b from-[#fff3ea] to-[#eedfd2] text-[#43338b] shadow-[inset_0_-4px_0_rgba(195,165,151,0.42)]'
+      : 'border-[#cdbab0] bg-gradient-to-b from-[#f8f1ea] to-[#e5d7cb] text-[#4b4f98] shadow-[inset_0_-4px_0_rgba(216,197,172,0.55)]'
 
   return (
     <input
@@ -39,7 +39,7 @@ export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function L
       maxLength={1}
       onChange={(event) => onChange?.(event.target.value)}
       onKeyDown={onKeyDown}
-      className={`h-14 w-14 rounded-[14px] border-[3px] text-center text-[1.45rem] font-black uppercase leading-none tracking-[0.08em] outline-none transition focus:border-[#ffd34f] focus:ring-4 focus:ring-[#ffd34f]/30 disabled:cursor-not-allowed ${colorClass} ${className}`}
+      className={`h-14 w-14 rounded-[14px] border-[3px] text-center text-[1.45rem] font-black uppercase leading-none tracking-[0.08em] outline-none transition focus:border-[#8ec7ff] focus:ring-4 focus:ring-[#8ec7ff]/30 disabled:cursor-not-allowed ${colorClass} ${className}`}
       style={{
         fontFamily: 'Trebuchet MS, Nunito, ui-sans-serif, system-ui, sans-serif',
         textShadow: '0 1px 0 rgba(255,255,255,0.25)',

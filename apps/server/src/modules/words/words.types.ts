@@ -11,9 +11,11 @@ export interface WordRecord {
 
 export interface SecretWordFilters {
   length?: number
+  maxLength?: number
   language?: string
   difficulty?: string
   category?: string
+  excludeWords?: string[]
 }
 
 export type WordActivityState = 'active' | 'inactive' | 'all'

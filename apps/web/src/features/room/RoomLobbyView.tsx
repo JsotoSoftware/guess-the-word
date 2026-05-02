@@ -13,6 +13,7 @@ interface LobbySettingsFormState {
   pvpTimerSeconds: string
   submissionMode: RoomSettings['submissionMode']
   maxPlayers: string
+  maxWordLength: string
 }
 
 interface RoomLobbyViewProps {
@@ -48,14 +49,14 @@ function getPlayerInitial(nickname: string) {
 
 function statCard(icon: string, label: string, value: string, helper?: string) {
   return (
-    <div className="rounded-[26px] border border-white/8 bg-slate-950/55 px-4 py-4 text-slate-200 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)]">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="min-w-0 rounded-[26px] border border-white/8 bg-slate-950/55 px-4 py-4 text-slate-200 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)]">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">{label}</p>
-          <p className="mt-3 text-3xl font-black tracking-tight text-white sm:text-[2.2rem]">{value}</p>
-          {helper ? <p className="mt-1 text-sm font-semibold text-slate-300">{helper}</p> : null}
+          <p className="mt-3 text-[clamp(1.45rem,2vw,1.9rem)] font-black leading-[1.02] tracking-tight text-white">{value}</p>
+          {helper ? <p className="mt-1 text-sm font-semibold leading-5 text-slate-300">{helper}</p> : null}
         </div>
-        <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-2xl">{icon}</span>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/8 text-2xl">{icon}</span>
       </div>
     </div>
   )
@@ -154,11 +155,12 @@ export function RoomLobbyView({
           </RoomPanel>
 
           <RoomPanel title="🎮 Partida" description="Solo lo importante para empezar rápido.">
-            <div className={`grid gap-3 sm:grid-cols-2 ${isHost ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
+            <div className={`grid gap-3 sm:grid-cols-2 ${isHost ? '2xl:grid-cols-4' : '2xl:grid-cols-3'}`}>
               {statCard('🎲', 'Modo', formatMode(room.settings.mode))}
               {statCard('👥', 'Jugadores', `${room.players.length}${room.settings.maxPlayers ? ` / ${room.settings.maxPlayers}` : ''}`)}
               {isHost ? statCard('🚦', 'Mínimo', String(room.minPlayersRequired), 'para empezar') : null}
               {statCard('🎯', 'Intentos', String(room.settings.attemptsPerRound), 'por ronda')}
+              {statCard('🔠', 'Largo máx.', room.settings.maxWordLength ? `${room.settings.maxWordLength}` : 'Cualquiera')}
             </div>
 
             <div className="mt-4 rounded-[26px] border border-brand-300/20 bg-brand-400/10 px-4 py-4 text-base font-semibold leading-7 text-brand-50">
@@ -273,6 +275,24 @@ export function RoomLobbyView({
                   </label>
                 </div>
 
+                <label className="block space-y-2 text-base text-slate-300">
+                  <span className="font-black text-white">Longitud máxima de palabra</span>
+                  <select
+                    name="maxWordLength"
+                    value={settingsForm.maxWordLength}
+                    onChange={onSettingsChange}
+                    className="w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-base text-white outline-none transition focus:border-brand-300"
+                  >
+                    <option value="">Cualquiera</option>
+                    <option value="4">Hasta 4 letras</option>
+                    <option value="5">Hasta 5 letras</option>
+                    <option value="6">Hasta 6 letras</option>
+                    <option value="7">Hasta 7 letras</option>
+                    <option value="8">Hasta 8 letras</option>
+                    <option value="9">Hasta 9 letras</option>
+                  </select>
+                </label>
+
                 {settingsError ? <p className="rounded-2xl border border-rose-500/30 bg-rose-500/12 px-4 py-3 text-base text-rose-100">{settingsError}</p> : null}
 
                 <button
@@ -284,13 +304,14 @@ export function RoomLobbyView({
                 </button>
               </form>
             ) : (
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
                 {statCard('🎲', 'Modo', formatMode(room.settings.mode))}
                 {statCard('⚡', 'Envío', formatSubmissionMode(room.settings.submissionMode))}
                 {statCard('🏁', 'Rondas', String(room.settings.totalRounds))}
                 {statCard('🎯', 'Intentos', String(room.settings.attemptsPerRound))}
                 {statCard('⏱️', 'Temporizador', formatTimer(room.settings.pvpTimerSeconds))}
                 {statCard('👥', 'Máx. jugadores', room.settings.maxPlayers ? String(room.settings.maxPlayers) : 'Sin límite')}
+                {statCard('🔠', 'Largo máx.', room.settings.maxWordLength ? String(room.settings.maxWordLength) : 'Cualquiera')}
               </div>
             )}
           </RoomPanel>

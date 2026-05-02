@@ -21,6 +21,7 @@ export interface RoomSettings {
   pvpTimerSeconds: number | null
   submissionMode: GuessSubmissionMode
   maxPlayers: number | null
+  maxWordLength: number | null
   roundSummaryAutoAdvanceSeconds: number
 }
 

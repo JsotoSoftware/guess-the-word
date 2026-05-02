@@ -16,7 +16,7 @@ function getBoardMetrics(wordLength: number) {
   const idealSize = wordLength <= 5 ? 76 : wordLength <= 7 ? 66 : wordLength <= 9 ? 56 : 48
   const gap = wordLength <= 7 ? 10 : 8
   const maxWidth = wordLength * idealSize + Math.max(wordLength - 1, 0) * gap
-  const gapClass = gap === 10 ? 'gap-2.5' : 'gap-2'
+  const gapClass = gap === 10 ? 'gap-1.5 sm:gap-2.5' : 'gap-1 sm:gap-2'
 
   return { maxWidth, gapClass }
 }
@@ -55,11 +55,11 @@ export function GuessGridRow({ wordLength, faded = false, children }: GuessGridR
 
 export function WordBoard({ timerLabel, footer, children }: WordBoardProps) {
   return (
-    <div className="rounded-[32px] border-[5px] border-[#4659ba] bg-gradient-to-b from-[#7cb3ff] via-[#66a7ff] to-[#4d87ef] p-4 shadow-[0_18px_40px_rgba(30,64,175,0.35)] sm:p-5">
-      <div className="rounded-[24px] border-[4px] border-[#3048a8] bg-[#88b7ff] p-3 shadow-[inset_0_-6px_0_rgba(28,64,150,0.35)] sm:p-5">
+    <div className="rounded-[28px] border border-[#6264c2] bg-gradient-to-b from-[#6769be] via-[#5a5db1] to-[#4e509d] p-1.5 shadow-[0_18px_40px_rgba(46,33,112,0.35)] sm:rounded-[32px] sm:border-[5px] sm:border-[#6c6dd0] sm:from-[#7072c7] sm:via-[#6163b8] sm:to-[#4e509d] sm:p-5">
+      <div className="rounded-[20px] border border-[#6668c7] bg-[#4e509d] p-1 shadow-[inset_0_-6px_0_rgba(46,33,112,0.28)] sm:rounded-[24px] sm:border-[4px] sm:border-[#7475d7] sm:bg-[#4e509d] sm:p-5">
         {timerLabel ? (
-          <div className="mb-4 flex justify-center">
-            <span className="rounded-full border border-[#3048a8]/70 bg-[#fef3c7] px-4 py-2 text-base font-black text-[#3048a8] shadow-[inset_0_-2px_0_rgba(180,142,41,0.25)]">
+          <div className="mb-3 flex justify-center sm:mb-4">
+            <span className="rounded-full border border-[#3048a8]/70 bg-[#fef3c7] px-3 py-1.5 text-sm font-black text-[#3048a8] shadow-[inset_0_-2px_0_rgba(180,142,41,0.25)] sm:px-4 sm:py-2 sm:text-base">
               ⏱️ {timerLabel}
             </span>
           </div>
@@ -67,7 +67,7 @@ export function WordBoard({ timerLabel, footer, children }: WordBoardProps) {
 
         <div className="space-y-3">{children}</div>
 
-        {footer ? <div className="mt-5">{footer}</div> : null}
+        {footer ? <div className="mt-4 sm:mt-5">{footer}</div> : null}
       </div>
     </div>
   )

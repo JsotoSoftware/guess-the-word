@@ -20,6 +20,10 @@ export class WordsRepository {
       conditions.push(sql.fragment`length = ${filters.length}`)
     }
 
+    if (typeof filters.maxLength === 'number') {
+      conditions.push(sql.fragment`length <= ${filters.maxLength}`)
+    }
+
     if (filters.language) {
       conditions.push(sql.fragment`language = ${filters.language}`)
     }
@@ -30,6 +34,10 @@ export class WordsRepository {
 
     if (filters.category) {
       conditions.push(sql.fragment`category = ${filters.category}`)
+    }
+
+    if (filters.excludeWords && filters.excludeWords.length > 0) {
+      conditions.push(sql.fragment`word != ALL(${sql.array(filters.excludeWords, 'text')})`)
     }
 
     if (conditions.length === 0) {

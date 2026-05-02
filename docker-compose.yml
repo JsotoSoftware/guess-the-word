@@ -1,0 +1,64 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: guess-the-word-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-guess_the_word}
+      POSTGRES_USER: ${POSTGRES_USER:-guess_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+    volumes:
+      - guess_the_word_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-guess_user} -d ${POSTGRES_DB:-guess_the_word}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  server:
+    container_name: guess-the-word-server
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    restart: unless-stopped
+    environment:
+      PORT: 2028
+      NODE_ENV: production
+      CLIENT_URL: ${CLIENT_URL}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-guess_user}:${POSTGRES_PASSWORD:-change_me}@db:5432/${POSTGRES_DB:-guess_the_word}
+    depends_on:
+      db:
+        condition: service_healthy
+    expose:
+      - '2028'
+    networks:
+      - internal
+      - caddy
+
+  web:
+    container_name: guess-the-word-web
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_SOCKET_URL: ${VITE_SOCKET_URL}
+        WEB_PORT: 2027
+    restart: unless-stopped
+    expose:
+      - '2027'
+    networks:
+      - caddy
+
+volumes:
+  guess_the_word_db:
+
+networks:
+  internal:
+  caddy:
+    name: caddy_default
+    external: true
