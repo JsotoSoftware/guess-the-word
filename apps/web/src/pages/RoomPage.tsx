@@ -13,6 +13,7 @@ import { LetterBox } from '../components/game/LetterBox'
 import { RoomChatDock } from '../features/room/RoomChatDock'
 import { RoomIconButton } from '../features/room/RoomIconButton'
 import { RoomLobbyView } from '../features/room/RoomLobbyView'
+import { MobileLetterKeyboard } from '../features/room/MobileLetterKeyboard'
 import { RoomPanel } from '../features/room/RoomPanel'
 import { RoomStageHeader } from '../features/room/RoomStageHeader'
 import { GuessGridRow, WordBoard, getResponsiveLetterBoxClassName } from '../features/room/WordBoard'
@@ -253,6 +254,41 @@ function getPlayerInitial(nickname: string) {
   return Array.from(nickname)[0]?.toUpperCase() ?? '?'
 }
 
+function getKeyboardLetterFeedbackState(guessHistory: Array<{ result: LetterResult[] }>) {
+  const confirmedLetters = new Set<string>()
+  const absentLetters = new Set<string>()
+  const letterStates: Partial<Record<string, 'present' | 'correct'>> = {}
+
+  for (const guessRecord of guessHistory) {
+    for (const letterResult of guessRecord.result) {
+      const normalizedLetter = letterResult.letter.toLowerCase()
+
+      if (letterResult.feedback === 'green') {
+        confirmedLetters.add(normalizedLetter)
+        letterStates[normalizedLetter] = 'correct'
+        continue
+      }
+
+      if (letterResult.feedback === 'yellow') {
+        confirmedLetters.add(normalizedLetter)
+        if (letterStates[normalizedLetter] !== 'correct') {
+          letterStates[normalizedLetter] = 'present'
+        }
+        continue
+      }
+
+      absentLetters.add(normalizedLetter)
+    }
+  }
+
+  const disabledLetters = [...absentLetters].filter((letter) => !confirmedLetters.has(letter))
+
+  return {
+    disabledLetters,
+    letterStates,
+  }
+}
+
 function getPlacementIcon(position: number): string {
   if (position === 1) {
     return '🥇'
@@ -372,6 +408,7 @@ export function RoomPage() {
   const currentRoomPlayer = currentVisibleRoom?.players.find((player) => player.playerId === currentPlayerId) ?? null
   const isHost = currentRoomPlayer?.isHost ?? false
   const isDesktopChat = useMediaQuery('(min-width: 1024px)')
+  const isMobileLetterKeyboard = useMediaQuery('(max-width: 767px)')
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const unreadChatCount = useChatNotifications({
     roomCode: currentRoomCode,
@@ -391,6 +428,7 @@ export function RoomPage() {
   const activeRoundKey = activeRoom ? `${activeRoom.roomCode}:${activeRoom.currentRoundNumber}:${activeRoom.round.mode}:${activeWordLength}` : null
   const inputRefs = useRef<Array<HTMLInputElement | null>>([])
   const [letters, setLetters] = useState<string[]>(() => createEmptyLetters(activeWordLength))
+  const [activeInputIndex, setActiveInputIndex] = useState(0)
 
   useEffect(() => {
     if (!activeWordLength) {
@@ -425,6 +463,7 @@ export function RoomPage() {
     }
 
     setLetters(createEmptyLetters(activeWordLength))
+    setActiveInputIndex(0)
     setIsSubmittingGuess(false)
     requestAnimationFrame(() => inputRefs.current[0]?.focus())
   }, [activeRoundKey, activeWordLength])
@@ -464,6 +503,10 @@ export function RoomPage() {
   const boardMessage = buildBoardMessage(Boolean(isAutoSend), canSubmitGuess, boardIsSolved, boardOutOfAttempts)
   const boardMessageIcon = getBoardMessageIcon(Boolean(isAutoSend), canSubmitGuess, boardIsSolved, boardOutOfAttempts)
   const boardMessageTone = getBoardMessageTone(canSubmitGuess, boardIsSolved, boardOutOfAttempts)
+  const mobileKeyboardFeedback = useMemo(
+    () => getKeyboardLetterFeedbackState(pvpRound ? (activeRoundPlayer?.guessHistory ?? []) : (coopRound?.guessHistory ?? [])),
+    [activeRoundPlayer?.guessHistory, coopRound?.guessHistory, pvpRound],
+  )
   const responsiveLetterBoxClassName = getResponsiveLetterBoxClassName(activeWordLength)
 
   useEffect(() => {
@@ -603,6 +646,7 @@ export function RoomPage() {
       })
 
       setLetters(createEmptyLetters(activeWordLength))
+      setActiveInputIndex(0)
       setIsSubmittingGuess(false)
       requestAnimationFrame(() => inputRefs.current[0]?.focus())
 
@@ -677,7 +721,9 @@ export function RoomPage() {
   }
 
   const focusInput = (index: number) => {
-    const input = inputRefs.current[index]
+    const safeIndex = Math.max(0, Math.min(index, Math.max(activeWordLength - 1, 0)))
+    setActiveInputIndex(safeIndex)
+    const input = inputRefs.current[safeIndex]
     input?.focus()
     input?.select()
   }
@@ -687,6 +733,7 @@ export function RoomPage() {
       return
     }
 
+    setActiveInputIndex(index)
     const nextLetter = sanitizeLetter(rawValue)
 
     setLetters((currentLetters) => {
@@ -697,10 +744,15 @@ export function RoomPage() {
 
     if (nextLetter && index < activeWordLength - 1) {
       requestAnimationFrame(() => focusInput(index + 1))
+      return
     }
+
+    setActiveInputIndex(index)
   }
 
   const handleBoardKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
+    setActiveInputIndex(index)
+
     if (!activeWordLength) {
       return
     }
@@ -728,6 +780,34 @@ export function RoomPage() {
     }
   }
 
+  const handleMobileLetterPress = (letter: string) => {
+    if (!canSubmitGuess || !activeWordLength) {
+      return
+    }
+
+    const targetIndex = Math.min(activeInputIndex, Math.max(activeWordLength - 1, 0))
+    updateLetterAt(targetIndex, letter)
+  }
+
+  const handleMobileBackspace = () => {
+    if (!canSubmitGuess || !activeWordLength) {
+      return
+    }
+
+    const targetIndex = Math.min(activeInputIndex, Math.max(activeWordLength - 1, 0))
+
+    if (letters[targetIndex]) {
+      updateLetterAt(targetIndex, '')
+      focusInput(targetIndex)
+      return
+    }
+
+    if (targetIndex > 0) {
+      updateLetterAt(targetIndex - 1, '')
+      focusInput(targetIndex - 1)
+    }
+  }
+
   const renderGuessRow = (guess: string, lettersResult: LetterResult[]) => {
     const rowLetterBoxClassName = getResponsiveLetterBoxClassName(lettersResult.length)
 
@@ -752,15 +832,30 @@ export function RoomPage() {
         <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
           <WordBoard
             timerLabel={pvpRound.timer.enabled ? activeTimerLabel : null}
-            footer={!isAutoSend ? (
-              <button
-                type="button"
-                onClick={() => void handleSubmitGuess(false)}
-                disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
-                className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-              >
-                {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
-              </button>
+            footer={isMobileLetterKeyboard || !isAutoSend ? (
+              <>
+                {isMobileLetterKeyboard && canSubmitGuess ? (
+                  <div className="mb-4">
+                    <MobileLetterKeyboard
+                      disabledLetters={mobileKeyboardFeedback.disabledLetters}
+                      letterStates={mobileKeyboardFeedback.letterStates}
+                      onLetterPress={handleMobileLetterPress}
+                      onBackspace={handleMobileBackspace}
+                    />
+                  </div>
+                ) : null}
+
+                {!isAutoSend ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleSubmitGuess(false)}
+                    disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
+                    className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                  >
+                    {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
+                  </button>
+                ) : null}
+              </>
             ) : null}
           >
             {activeRoundPlayer?.guessHistory.map((guessRecord) => renderGuessRow(guessRecord.guess, guessRecord.result))}
@@ -775,9 +870,13 @@ export function RoomPage() {
                     ref={(element) => {
                       inputRefs.current[index] = element
                     }}
+                    readOnly={isMobileLetterKeyboard}
+                    inputMode={isMobileLetterKeyboard ? 'none' : 'text'}
+                    onFocus={() => setActiveInputIndex(index)}
+                    onClick={() => setActiveInputIndex(index)}
                     onChange={(value) => updateLetterAt(index, value)}
                     onKeyDown={(event) => handleBoardKeyDown(index, event)}
-                    className={responsiveLetterBoxClassName}
+                    className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
                   />
                 ))}
               </GuessGridRow>
@@ -913,15 +1012,30 @@ export function RoomPage() {
       <div className="space-y-5 pb-20 lg:pb-0">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
           <WordBoard
-            footer={!isAutoSend ? (
-              <button
-                type="button"
-                onClick={() => void handleSubmitGuess(false)}
-                disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
-                className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-              >
-                {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
-              </button>
+            footer={isMobileLetterKeyboard || !isAutoSend ? (
+              <>
+                {isMobileLetterKeyboard && canSubmitGuess ? (
+                  <div className="mb-4">
+                    <MobileLetterKeyboard
+                      disabledLetters={mobileKeyboardFeedback.disabledLetters}
+                      letterStates={mobileKeyboardFeedback.letterStates}
+                      onLetterPress={handleMobileLetterPress}
+                      onBackspace={handleMobileBackspace}
+                    />
+                  </div>
+                ) : null}
+
+                {!isAutoSend ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleSubmitGuess(false)}
+                    disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
+                    className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                  >
+                    {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
+                  </button>
+                ) : null}
+              </>
             ) : null}
           >
             {coopRound.guessHistory.map((guessRecord) => {
@@ -947,9 +1061,13 @@ export function RoomPage() {
                     ref={(element) => {
                       inputRefs.current[index] = element
                     }}
+                    readOnly={isMobileLetterKeyboard}
+                    inputMode={isMobileLetterKeyboard ? 'none' : 'text'}
+                    onFocus={() => setActiveInputIndex(index)}
+                    onClick={() => setActiveInputIndex(index)}
                     onChange={(value) => updateLetterAt(index, value)}
                     onKeyDown={(event) => handleBoardKeyDown(index, event)}
-                    className={responsiveLetterBoxClassName}
+                    className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
                   />
                 ))}
               </GuessGridRow>

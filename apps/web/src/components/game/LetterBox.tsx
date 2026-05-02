@@ -1,4 +1,4 @@
-import type { CSSProperties, KeyboardEvent } from 'react'
+import type { CSSProperties, FocusEvent, InputHTMLAttributes, KeyboardEvent, MouseEvent } from 'react'
 import type { LetterFeedback } from '@guess-the-word/shared'
 
 import { forwardRef } from 'react'
@@ -8,8 +8,12 @@ interface LetterBoxProps {
   feedback?: LetterFeedback
   disabled?: boolean
   autoFocus?: boolean
+  readOnly?: boolean
+  inputMode?: InputHTMLAttributes<HTMLInputElement>['inputMode']
   onChange?: (value: string) => void
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void
+  onFocus?: (event: FocusEvent<HTMLInputElement>) => void
+  onClick?: (event: MouseEvent<HTMLInputElement>) => void
   className?: string
   style?: CSSProperties
 }
@@ -21,7 +25,20 @@ const feedbackClasses: Record<LetterFeedback, string> = {
 }
 
 export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function LetterBox(
-  { value, feedback, disabled = false, autoFocus = false, onChange, onKeyDown, className = '', style },
+  {
+    value,
+    feedback,
+    disabled = false,
+    autoFocus = false,
+    readOnly = false,
+    inputMode,
+    onChange,
+    onKeyDown,
+    onFocus,
+    onClick,
+    className = '',
+    style,
+  },
   ref,
 ) {
   const colorClass = feedback
@@ -36,9 +53,13 @@ export const LetterBox = forwardRef<HTMLInputElement, LetterBoxProps>(function L
       autoFocus={autoFocus}
       value={value}
       disabled={disabled}
+      readOnly={readOnly}
+      inputMode={inputMode}
       maxLength={1}
       onChange={(event) => onChange?.(event.target.value)}
       onKeyDown={onKeyDown}
+      onFocus={onFocus}
+      onClick={onClick}
       className={`h-14 w-14 rounded-[14px] border-[3px] text-center text-[1.45rem] font-black uppercase leading-none tracking-[0.08em] outline-none transition focus:border-[#8ec7ff] focus:ring-4 focus:ring-[#8ec7ff]/30 disabled:cursor-not-allowed ${colorClass} ${className}`}
       style={{
         fontFamily: 'Trebuchet MS, Nunito, ui-sans-serif, system-ui, sans-serif',
