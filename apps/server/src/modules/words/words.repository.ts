@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { sql } from 'slonik'
 import { DatabaseService } from '../../db/database.service'
-import type { AvailableWordLength, SecretWordFilters, WordActivityState, WordRecord } from './words.types'
+import type { AvailableWordCategory, AvailableWordLength, SecretWordFilters, WordActivityState, WordRecord } from './words.types'
 
 @Injectable()
 export class WordsRepository {
@@ -75,12 +75,30 @@ export class WordsRepository {
     return rows as AvailableWordLength[]
   }
 
+  async getAvailableCategories(filters: SecretWordFilters = {}, activityState: WordActivityState = 'active'): Promise<AvailableWordCategory[]> {
+    const pool = await this.database.getPool()
+    const whereClause = this.buildFilterConditions({
+      ...filters,
+      category: undefined,
+    }, activityState)
+
+    const rows = await pool.any(sql.unsafe`
+      SELECT category, COUNT(*)::int AS count
+      FROM words
+      WHERE ${whereClause} AND category IS NOT NULL
+      GROUP BY category
+      ORDER BY category ASC
+    `)
+
+    return rows as AvailableWordCategory[]
+  }
+
   async getRandomSecretWord(filters: SecretWordFilters): Promise<WordRecord | null> {
     const pool = await this.database.getPool()
     const whereClause = this.buildFilterConditions(filters)
 
     const word = await pool.maybeOne(sql.unsafe`
-      SELECT id, word, language, difficulty, category, length, is_active, created_at
+      SELECT id, word, language, difficulty, category, hint, length, is_active, created_at
       FROM words
       WHERE ${whereClause}
       ORDER BY random()
@@ -95,7 +113,7 @@ export class WordsRepository {
     const whereClause = this.buildFilterConditions(filters, activityState)
 
     const rows = await pool.any(sql.unsafe`
-      SELECT id, word, language, difficulty, category, length, is_active, created_at
+      SELECT id, word, language, difficulty, category, hint, length, is_active, created_at
       FROM words
       WHERE ${whereClause}
       ORDER BY language ASC, length ASC, word ASC
@@ -111,7 +129,7 @@ export class WordsRepository {
       UPDATE words
       SET is_active = ${isActive}
       WHERE id = ${wordId}
-      RETURNING id, word, language, difficulty, category, length, is_active, created_at
+      RETURNING id, word, language, difficulty, category, hint, length, is_active, created_at
     `)
 
     return word as WordRecord | null

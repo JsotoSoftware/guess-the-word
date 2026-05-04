@@ -6,6 +6,7 @@ interface WordImportObjectEntry {
   language?: unknown
   difficulty?: unknown
   category?: unknown
+  hint?: unknown
   isActive?: unknown
 }
 
@@ -51,6 +52,19 @@ function normalizeOptionalText(value: unknown, fallback: string | null): string 
   return normalizedValue || null
 }
 
+function normalizeOptionalHint(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error('La pista de la palabra debe ser un texto o null.')
+  }
+
+  const normalizedHint = value.trim()
+  return normalizedHint || null
+}
+
 function normalizeLanguage(value: unknown, fallback: string): string {
   if (value === undefined) {
     return fallback
@@ -90,6 +104,7 @@ function toWordImportRecord(entry: string | WordImportObjectEntry, defaults: Req
       language: defaults.language,
       difficulty: defaults.difficulty,
       category: defaults.category,
+      hint: null,
       length: Array.from(word).length,
       isActive: defaults.isActive,
     }
@@ -102,6 +117,7 @@ function toWordImportRecord(entry: string | WordImportObjectEntry, defaults: Req
     language: normalizeLanguage(entry.language, defaults.language),
     difficulty: normalizeOptionalText(entry.difficulty, defaults.difficulty),
     category: normalizeOptionalText(entry.category, defaults.category),
+    hint: normalizeOptionalHint(entry.hint),
     length: Array.from(word).length,
     isActive: normalizeIsActive(entry.isActive, defaults.isActive),
   }

@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Get, Param, Patch, Query } from '@nestjs/common'
 import { WordsService } from './words.service'
-import type { AvailableWordLength, SecretWordFilters, WordActivityState, WordRecord } from './words.types'
+import type { AvailableWordCategory, AvailableWordLength, SecretWordFilters, WordActivityState, WordRecord } from './words.types'
 
 interface WordsSummaryResponse {
   filters: SecretWordFilters
@@ -85,6 +85,20 @@ export class WordsController {
     return this.wordsService.listWords(
       this.parseFilters({ length, maxLength, language, difficulty, category }),
       this.parseActivityState(activity),
+    )
+  }
+
+  @Get('categories')
+  getAvailableCategories(
+    @Query('length') length?: string,
+    @Query('maxLength') maxLength?: string,
+    @Query('language') language?: string,
+    @Query('difficulty') difficulty?: string,
+    @Query('activity') activity?: string,
+  ): Promise<AvailableWordCategory[]> {
+    return this.wordsService.getAvailableCategories(
+      this.parseFilters({ length, maxLength, language, difficulty }),
+      this.parseActivityState(activity || 'active'),
     )
   }
 

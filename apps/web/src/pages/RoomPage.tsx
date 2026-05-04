@@ -22,6 +22,7 @@ import { useMediaQuery } from '../features/room/hooks/useMediaQuery'
 import { closeIcon, exitIcon } from '../features/room/room-icons'
 import { formatConnectionState } from '../features/room/room-formatters'
 import { useRoomSession } from '../contexts/room-session'
+import { useAvailableWordCategories } from '../hooks/useAvailableWordCategories'
 
 interface LobbySettingsFormState {
   mode: RoomSettings['mode']
@@ -31,6 +32,7 @@ interface LobbySettingsFormState {
   submissionMode: GuessSubmissionMode
   maxPlayers: string
   maxWordLength: string
+  category: string
 }
 
 function toSettingsFormState(settings: RoomSettings): LobbySettingsFormState {
@@ -42,6 +44,7 @@ function toSettingsFormState(settings: RoomSettings): LobbySettingsFormState {
     submissionMode: settings.submissionMode,
     maxPlayers: settings.maxPlayers === null ? '' : String(settings.maxPlayers),
     maxWordLength: settings.maxWordLength === null ? '' : String(settings.maxWordLength),
+    category: settings.category ?? '',
   }
 }
 
@@ -64,8 +67,17 @@ function buildRoomSettings(form: LobbySettingsFormState, room: LobbyRoomSnapshot
     submissionMode: form.submissionMode,
     maxPlayers: parseOptionalPositiveInteger(form.maxPlayers),
     maxWordLength: parseOptionalPositiveInteger(form.maxWordLength),
+    category: form.category.trim() || 'general',
     roundSummaryAutoAdvanceSeconds: room.settings.roundSummaryAutoAdvanceSeconds,
   }
+}
+
+function isMissingWordConfigurationError(message: string): boolean {
+  return message.startsWith('No se encontró una palabra activa')
+}
+
+function buildMissingWordConfigurationMessage(message: string): string {
+  return `${message} Cambia la categoría o ajusta la longitud máxima antes de volver a iniciar.`
 }
 
 function formatRemainingSeconds(seconds: number | null): string {
@@ -470,6 +482,11 @@ export function RoomPage() {
   const [settingsForm, setSettingsForm] = useState<LobbySettingsFormState | null>(
     lobbyRoom ? toSettingsFormState(lobbyRoom.settings) : null,
   )
+  const {
+    availableCategories,
+    isLoadingCategories,
+    categoriesError,
+  } = useAvailableWordCategories(lobbyRoom ? (settingsForm?.maxWordLength ?? '') : '')
 
   useEffect(() => {
     if (lobbyRoom) {
@@ -607,6 +624,10 @@ export function RoomPage() {
     () => getKeyboardLetterFeedbackState(activeGuessHistory),
     [activeGuessHistory],
   )
+  const absentLettersSet = useMemo(
+    () => new Set(mobileKeyboardFeedback.disabledLetters),
+    [mobileKeyboardFeedback.disabledLetters],
+  )
   const boardClueState = useMemo(
     () => getBoardClueState(activeGuessHistory, activeWordLength),
     [activeGuessHistory, activeWordLength],
@@ -644,6 +665,9 @@ export function RoomPage() {
   const handleSettingsChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
 
+    setSettingsError(null)
+    setActionMessage(null)
+
     setSettingsForm((currentForm) => {
       if (!currentForm) {
         return currentForm
@@ -659,6 +683,21 @@ export function RoomPage() {
       }
 
       return nextForm
+    })
+  }
+
+  const handleSelectCategory = (category: string) => {
+    setSettingsError(null)
+    setActionMessage(null)
+    setSettingsForm((currentForm) => {
+      if (!currentForm) {
+        return currentForm
+      }
+
+      return {
+        ...currentForm,
+        category,
+      }
     })
   }
 
@@ -698,7 +737,13 @@ export function RoomPage() {
     try {
       await startMatch({ roomCode: lobbyRoom.roomCode })
     } catch (error) {
-      setActionMessage(error instanceof Error ? error.message : 'No se pudo iniciar la partida.')
+      const message = error instanceof Error ? error.message : 'No se pudo iniciar la partida.'
+
+      if (isMissingWordConfigurationError(message)) {
+        setSettingsError(buildMissingWordConfigurationMessage(message))
+      } else {
+        setActionMessage(message)
+      }
     } finally {
       setIsStartingMatch(false)
     }
@@ -933,6 +978,58 @@ export function RoomPage() {
     )
   }
 
+  const renderCompactGuessHistory = (title: string, emptyMessage: string) => {
+    const compactLetterBoxClassName = activeWordLength <= 5
+      ? 'aspect-square h-auto w-full rounded-[10px] border-[2px] text-[0.82rem] sm:text-[0.95rem]'
+      : activeWordLength <= 7
+        ? 'aspect-square h-auto w-full rounded-[9px] border-[2px] text-[0.72rem] sm:text-[0.84rem]'
+        : 'aspect-square h-auto w-full rounded-[8px] border-[2px] text-[0.62rem] sm:text-[0.72rem]'
+
+    return (
+      <div className="rounded-[28px] border border-white/10 bg-slate-950/45 px-4 py-4 shadow-[inset_0_-3px_0_rgba(15,23,42,0.18)] sm:px-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Historial</p>
+            <h3 className="mt-2 text-lg font-black text-white">{title}</h3>
+          </div>
+          <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs font-black text-slate-200">
+            {activeGuessHistory.length}
+          </span>
+        </div>
+
+        {activeGuessHistory.length === 0 ? (
+          <p className="mt-4 text-sm leading-6 text-slate-400">{emptyMessage}</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 gap-2.5">
+            {activeGuessHistory.map((guessRecord) => (
+              <div
+                key={`${guessRecord.guess}-${guessRecord.submittedAt}`}
+                className="rounded-2xl border border-white/8 bg-slate-900/55 px-3 py-3"
+              >
+                <div
+                  className="mx-auto grid w-full max-w-full gap-1.5"
+                  style={{
+                    gridTemplateColumns: `repeat(${guessRecord.result.length}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {guessRecord.result.map((letterResult, index) => (
+                    <LetterBox
+                      key={`${guessRecord.guess}-${index}-${letterResult.feedback}`}
+                      value={letterResult.letter}
+                      feedback={letterResult.feedback}
+                      disabled
+                      className={`pointer-events-none min-w-0 shadow-none ${compactLetterBoxClassName}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const boardComposer = (
     <div className="space-y-4 rounded-[26px] border border-[#7b7ddf] bg-[#5a5db1] px-4 py-4 shadow-[0_12px_24px_rgba(46,33,112,0.2)] sm:px-5 sm:py-5">
       <div className="space-y-3">
@@ -987,7 +1084,7 @@ export function RoomPage() {
                 onClick={() => setActiveInputIndex(index)}
                 onChange={(value) => updateLetterAt(index, value)}
                 onKeyDown={(event) => handleBoardKeyDown(index, event)}
-                className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''}`}
+                className={`${responsiveLetterBoxClassName} ${isMobileLetterKeyboard && activeInputIndex === index ? 'ring-4 ring-[#8ec7ff]/35' : ''} ${!isMobileLetterKeyboard && letter && absentLettersSet.has(letter.toLowerCase()) ? 'border-[#d97706] bg-gradient-to-b from-[#ffd166] to-[#f59e0b] text-[#5b2d00] shadow-[inset_0_-4px_0_rgba(180,83,9,0.38)]' : ''}`}
               />
             ))}
           </GuessGridRow>
@@ -1000,36 +1097,46 @@ export function RoomPage() {
     return (
       <div className="space-y-5 pb-20 lg:pb-0">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
-          <WordBoard
-            timerLabel={pvpRound.timer.enabled ? activeTimerLabel : null}
-            footer={isMobileLetterKeyboard || !isAutoSend ? (
-              <>
-                {isMobileLetterKeyboard && canSubmitGuess ? (
-                  <div className="mb-4">
-                    <MobileLetterKeyboard
-                      disabledLetters={mobileKeyboardFeedback.disabledLetters}
-                      letterStates={mobileKeyboardFeedback.letterStates}
-                      onLetterPress={handleMobileLetterPress}
-                      onBackspace={handleMobileBackspace}
-                    />
-                  </div>
-                ) : null}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <WordBoard
+              timerLabel={pvpRound.timer.enabled ? activeTimerLabel : null}
+              footer={isMobileLetterKeyboard || !isAutoSend ? (
+                <>
+                  {isMobileLetterKeyboard && canSubmitGuess ? (
+                    <div className="mb-4">
+                      <MobileLetterKeyboard
+                        disabledLetters={mobileKeyboardFeedback.disabledLetters}
+                        letterStates={mobileKeyboardFeedback.letterStates}
+                        onLetterPress={handleMobileLetterPress}
+                        onBackspace={handleMobileBackspace}
+                      />
+                    </div>
+                  ) : null}
 
-                {!isAutoSend ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSubmitGuess(false)}
-                    disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
-                    className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-                  >
-                    {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-          >
-            {boardComposer}
-          </WordBoard>
+                  {!isAutoSend ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleSubmitGuess(false)}
+                      disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
+                      className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    >
+                      {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+            >
+              {boardComposer}
+            </WordBoard>
+
+            <div className="hidden lg:block">
+              {renderCompactGuessHistory('Tus palabras jugadas', 'Todavía no enviaste ninguna palabra en esta ronda.')}
+            </div>
+          </div>
+
+          <div className="mt-4 lg:hidden">
+            {renderCompactGuessHistory('Tus palabras jugadas', 'Todavía no enviaste ninguna palabra en esta ronda.')}
+          </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <GameStatCard icon="🎯" label="Intentos" value={String(activeRoundPlayer?.attemptsLeft ?? 0)} helper="restantes" tone="amber" />
@@ -1172,35 +1279,45 @@ export function RoomPage() {
     return (
       <div className="space-y-5 pb-20 lg:pb-0">
         <section className="rounded-[32px] border border-white/10 bg-slate-900/88 p-3 shadow-glow sm:p-6">
-          <WordBoard
-            footer={isMobileLetterKeyboard || !isAutoSend ? (
-              <>
-                {isMobileLetterKeyboard && canSubmitGuess ? (
-                  <div className="mb-4">
-                    <MobileLetterKeyboard
-                      disabledLetters={mobileKeyboardFeedback.disabledLetters}
-                      letterStates={mobileKeyboardFeedback.letterStates}
-                      onLetterPress={handleMobileLetterPress}
-                      onBackspace={handleMobileBackspace}
-                    />
-                  </div>
-                ) : null}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_400px]">
+            <WordBoard
+              footer={isMobileLetterKeyboard || !isAutoSend ? (
+                <>
+                  {isMobileLetterKeyboard && canSubmitGuess ? (
+                    <div className="mb-4">
+                      <MobileLetterKeyboard
+                        disabledLetters={mobileKeyboardFeedback.disabledLetters}
+                        letterStates={mobileKeyboardFeedback.letterStates}
+                        onLetterPress={handleMobileLetterPress}
+                        onBackspace={handleMobileBackspace}
+                      />
+                    </div>
+                  ) : null}
 
-                {!isAutoSend ? (
-                  <button
-                    type="button"
-                    onClick={() => void handleSubmitGuess(false)}
-                    disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
-                    className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-                  >
-                    {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
-                  </button>
-                ) : null}
-              </>
-            ) : null}
-          >
-            {boardComposer}
-          </WordBoard>
+                  {!isAutoSend ? (
+                    <button
+                      type="button"
+                      onClick={() => void handleSubmitGuess(false)}
+                      disabled={!canSubmitGuess || !isRowComplete || isSubmittingGuess}
+                      className="mx-auto block w-full max-w-sm rounded-full bg-brand-500 px-5 py-4 text-lg font-black text-white transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+                    >
+                      {isSubmittingGuess ? 'Enviando...' : '🚀 Enviar palabra'}
+                    </button>
+                  ) : null}
+                </>
+              ) : null}
+            >
+              {boardComposer}
+            </WordBoard>
+
+            <div className="hidden lg:block">
+              {renderCompactGuessHistory('Palabras del equipo', 'Todavía no hay palabras registradas en esta ronda.')}
+            </div>
+          </div>
+
+          <div className="mt-4 lg:hidden">
+            {renderCompactGuessHistory('Palabras del equipo', 'Todavía no hay palabras registradas en esta ronda.')}
+          </div>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
             <GameStatCard icon="🎯" label="Intentos" value={String(coopRound.attemptsLeft)} helper="del equipo" tone="amber" />
@@ -1621,6 +1738,9 @@ export function RoomPage() {
       copyFeedback={copyFeedback}
       isSavingSettings={isSavingSettings}
       isStartingMatch={isStartingMatch}
+      isLoadingCategories={isLoadingCategories}
+      categoriesError={categoriesError}
+      availableCategories={availableCategories}
       isSendingChat={isSendingChat}
       isLeavingRoom={isLeavingRoom}
       isClosingRoom={isClosingRoom}
@@ -1628,6 +1748,7 @@ export function RoomPage() {
       unreadCount={unreadChatCount}
       isMobileChatOpen={isMobileChatOpen}
       onSettingsChange={handleSettingsChange}
+      onSelectCategory={handleSelectCategory}
       onSaveSettings={handleSaveSettings}
       onStartMatch={() => void handleStartMatch()}
       onSendChat={handleSendChat}

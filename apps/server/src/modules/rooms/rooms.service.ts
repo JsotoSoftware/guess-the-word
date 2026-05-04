@@ -450,10 +450,16 @@ export class RoomsService {
       })
     }
 
-    room.status = 'in_game'
-    room.currentRoundNumber = 1
+    const previousUsedSecretWordsInMatch = [...room.usedSecretWordsInMatch]
     room.usedSecretWordsInMatch = []
-    await this.startRound(room, room.currentRoundNumber)
+
+    try {
+      await this.startRound(room, 1)
+    } catch (error) {
+      room.usedSecretWordsInMatch = previousUsedSecretWordsInMatch
+      throw error
+    }
+
     this.touchRoom(room)
 
     return {
@@ -484,8 +490,8 @@ export class RoomsService {
       }
     }
 
-    room.currentRoundNumber += 1
-    await this.startRound(room, room.currentRoundNumber)
+    const nextRoundNumber = room.currentRoundNumber + 1
+    await this.startRound(room, nextRoundNumber)
     this.touchRoom(room)
 
     return {
@@ -883,21 +889,54 @@ export class RoomsService {
     try {
       const secretWord = await this.wordsService.getRandomSecretWord({
         maxLength: room.settings.maxWordLength ?? undefined,
+        category: room.settings.category ?? undefined,
         excludeWords: room.usedSecretWordsInMatch,
       })
       room.usedSecretWordsInMatch.push(secretWord.word)
       return secretWord
     } catch (error) {
-      if (!(error instanceof NotFoundException) || room.usedSecretWordsInMatch.length === 0) {
+      if (!(error instanceof NotFoundException)) {
         throw error
       }
 
-      const secretWord = await this.wordsService.getRandomSecretWord({
-        maxLength: room.settings.maxWordLength ?? undefined,
-      })
-      room.usedSecretWordsInMatch.push(secretWord.word)
-      return secretWord
+      if (room.usedSecretWordsInMatch.length === 0) {
+        throw new NotFoundException(this.buildMissingSecretWordMessage(room))
+      }
+
+      try {
+        const secretWord = await this.wordsService.getRandomSecretWord({
+          maxLength: room.settings.maxWordLength ?? undefined,
+          category: room.settings.category ?? undefined,
+        })
+        room.usedSecretWordsInMatch.push(secretWord.word)
+        return secretWord
+      } catch (fallbackError) {
+        if (fallbackError instanceof NotFoundException) {
+          throw new NotFoundException(this.buildMissingSecretWordMessage(room))
+        }
+
+        throw fallbackError
+      }
     }
+  }
+
+  private buildMissingSecretWordMessage(room: LiveRoom): string {
+    const category = room.settings.category
+    const maxWordLength = room.settings.maxWordLength
+
+    if (category && maxWordLength !== null) {
+      return `No se encontró una palabra activa para la categoría ${category} con longitud máxima de ${maxWordLength}.`
+    }
+
+    if (category) {
+      return `No se encontró una palabra activa para la categoría ${category}.`
+    }
+
+    if (maxWordLength !== null) {
+      return `No se encontró una palabra activa con longitud máxima de ${maxWordLength}.`
+    }
+
+    return 'No se encontró una palabra activa para los filtros solicitados.'
   }
 
   private isRoomWaitingOnRoundSummary(room: LiveRoom): boolean {
@@ -1588,6 +1627,7 @@ export class RoomsService {
     const maxWordLength = settings.maxWordLength === null
       ? null
       : this.ensurePositiveInteger(settings.maxWordLength, 'maxWordLength')
+    const category = this.normalizeOptionalCategory(settings.category)
 
     if (maxPlayers !== null && maxPlayers < MIN_PLAYERS_BY_MODE[mode]) {
       throw new InvalidRoomSettingsError('La cantidad máxima de jugadores es incompatible con el modo seleccionado.', {
@@ -1597,8 +1637,8 @@ export class RoomsService {
       })
     }
 
-    if (maxWordLength !== null && (maxWordLength < 4 || maxWordLength > 9)) {
-      throw new InvalidRoomSettingsError('La longitud máxima de palabra debe estar entre 4 y 9.', {
+    if (maxWordLength !== null && (maxWordLength < 4 || maxWordLength > 12)) {
+      throw new InvalidRoomSettingsError('La longitud máxima de palabra debe estar entre 4 y 12.', {
         maxWordLength,
       })
     }
@@ -1611,8 +1651,18 @@ export class RoomsService {
       submissionMode: settings.submissionMode,
       maxPlayers,
       maxWordLength,
+      category,
       roundSummaryAutoAdvanceSeconds,
     }
+  }
+
+  private normalizeOptionalCategory(category: string | null | undefined): string {
+    if (category === null || category === undefined) {
+      return 'general'
+    }
+
+    const normalizedCategory = category.trim().toLowerCase()
+    return normalizedCategory || 'general'
   }
 
   private normalizeMode(mode: GameMode): GameMode {

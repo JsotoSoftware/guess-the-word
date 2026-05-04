@@ -23,6 +23,7 @@ export const DEFAULT_ROOM_SETTINGS = {
   submissionMode: 'manual_submit',
   maxPlayers: 4,
   maxWordLength: 6,
+  category: 'general',
   roundSummaryAutoAdvanceSeconds: DEFAULT_ROUND_SUMMARY_AUTO_ADVANCE_SECONDS,
 }
 

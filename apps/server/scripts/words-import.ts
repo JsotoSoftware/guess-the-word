@@ -71,11 +71,12 @@ async function run() {
     await pool.transaction(async (transaction) => {
       for (const word of importedWords) {
         await transaction.query(sql.unsafe`
-          INSERT INTO words (word, language, difficulty, category, length, is_active)
-          VALUES (${word.word}, ${word.language}, ${word.difficulty}, ${word.category}, ${word.length}, ${word.isActive})
+          INSERT INTO words (word, language, difficulty, category, hint, length, is_active)
+          VALUES (${word.word}, ${word.language}, ${word.difficulty}, ${word.category}, ${word.hint}, ${word.length}, ${word.isActive})
           ON CONFLICT (word, language) DO UPDATE SET
             difficulty = EXCLUDED.difficulty,
             category = EXCLUDED.category,
+            hint = EXCLUDED.hint,
             length = EXCLUDED.length,
             is_active = EXCLUDED.is_active
         `)

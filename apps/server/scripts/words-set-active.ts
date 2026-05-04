@@ -57,13 +57,13 @@ async function run() {
           UPDATE words
           SET is_active = ${options.isActive}
           WHERE id = ${options.id}
-          RETURNING id, word, language, difficulty, category, length, is_active, created_at
+          RETURNING id, word, language, difficulty, category, hint, length, is_active, created_at
         `)
       : await pool.any(sql.unsafe`
           UPDATE words
           SET is_active = ${options.isActive}
           WHERE word = ${options.word ?? ''} AND language = ${options.language}
-          RETURNING id, word, language, difficulty, category, length, is_active, created_at
+          RETURNING id, word, language, difficulty, category, hint, length, is_active, created_at
         `)
 
     if (updatedWords.length === 0) {

@@ -1,5 +1,7 @@
 import type { LobbyRoomSnapshot, RoomSettings } from '@guess-the-word/shared'
 import type { ChangeEvent, FormEvent } from 'react'
+import { CategoryField } from '../../components/ui/CategoryField'
+import type { AvailableWordCategory } from '../../lib/word-categories'
 import { RoomChatDock } from './RoomChatDock'
 import { RoomIconButton } from './RoomIconButton'
 import { RoomPanel } from './RoomPanel'
@@ -14,6 +16,7 @@ interface LobbySettingsFormState {
   submissionMode: RoomSettings['submissionMode']
   maxPlayers: string
   maxWordLength: string
+  category: string
 }
 
 interface RoomLobbyViewProps {
@@ -26,6 +29,9 @@ interface RoomLobbyViewProps {
   copyFeedback: string | null
   isSavingSettings: boolean
   isStartingMatch: boolean
+  isLoadingCategories: boolean
+  categoriesError: string | null
+  availableCategories: AvailableWordCategory[]
   isSendingChat: boolean
   isLeavingRoom: boolean
   isClosingRoom: boolean
@@ -33,6 +39,7 @@ interface RoomLobbyViewProps {
   unreadCount: number
   isMobileChatOpen: boolean
   onSettingsChange: (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
+  onSelectCategory: (category: string) => void
   onSaveSettings: (event: FormEvent<HTMLFormElement>) => void
   onStartMatch: () => void
   onSendChat: (event: FormEvent<HTMLFormElement>) => void
@@ -72,6 +79,9 @@ export function RoomLobbyView({
   copyFeedback,
   isSavingSettings,
   isStartingMatch,
+  isLoadingCategories,
+  categoriesError,
+  availableCategories,
   isSendingChat,
   isLeavingRoom,
   isClosingRoom,
@@ -79,6 +89,7 @@ export function RoomLobbyView({
   unreadCount,
   isMobileChatOpen,
   onSettingsChange,
+  onSelectCategory,
   onSaveSettings,
   onStartMatch,
   onSendChat,
@@ -161,6 +172,7 @@ export function RoomLobbyView({
               {isHost ? statCard('🚦', 'Mínimo', String(room.minPlayersRequired), 'para empezar') : null}
               {statCard('🎯', 'Intentos', String(room.settings.attemptsPerRound), 'por ronda')}
               {statCard('🔠', 'Largo máx.', room.settings.maxWordLength ? `${room.settings.maxWordLength}` : 'Cualquiera')}
+              {statCard('🗂️', 'Categoría', room.settings.category ?? 'Cualquiera')}
             </div>
 
             <div className="mt-4 rounded-[26px] border border-brand-300/20 bg-brand-400/10 px-4 py-4 text-base font-semibold leading-7 text-brand-50">
@@ -275,23 +287,41 @@ export function RoomLobbyView({
                   </label>
                 </div>
 
-                <label className="block space-y-2 text-base text-slate-300">
-                  <span className="font-black text-white">Longitud máxima de palabra</span>
-                  <select
-                    name="maxWordLength"
-                    value={settingsForm.maxWordLength}
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block space-y-2 text-base text-slate-300">
+                    <span className="font-black text-white">Longitud máxima de palabra</span>
+                    <select
+                      name="maxWordLength"
+                      value={settingsForm.maxWordLength}
+                      onChange={onSettingsChange}
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-base text-white outline-none transition focus:border-brand-300"
+                    >
+                      <option value="">Cualquiera</option>
+                      <option value="4">Hasta 4 letras</option>
+                      <option value="5">Hasta 5 letras</option>
+                      <option value="6">Hasta 6 letras</option>
+                      <option value="7">Hasta 7 letras</option>
+                      <option value="8">Hasta 8 letras</option>
+                      <option value="9">Hasta 9 letras</option>
+                      <option value="10">Hasta 10 letras</option>
+                      <option value="11">Hasta 11 letras</option>
+                      <option value="12">Hasta 12 letras</option>
+                    </select>
+                  </label>
+
+                  <CategoryField
+                    name="category"
+                    value={settingsForm.category}
                     onChange={onSettingsChange}
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-base text-white outline-none transition focus:border-brand-300"
-                  >
-                    <option value="">Cualquiera</option>
-                    <option value="4">Hasta 4 letras</option>
-                    <option value="5">Hasta 5 letras</option>
-                    <option value="6">Hasta 6 letras</option>
-                    <option value="7">Hasta 7 letras</option>
-                    <option value="8">Hasta 8 letras</option>
-                    <option value="9">Hasta 9 letras</option>
-                  </select>
-                </label>
+                    onSelectCategory={onSelectCategory}
+                    availableCategories={availableCategories}
+                    isLoading={isLoadingCategories}
+                    error={categoriesError}
+                    labelClassName="font-black text-white"
+                    inputClassName="w-full rounded-2xl border border-white/10 bg-slate-950/65 px-4 py-3 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-brand-300"
+                    helperClassName="text-sm leading-6 text-slate-400"
+                  />
+                </div>
 
                 {settingsError ? <p className="rounded-2xl border border-rose-500/30 bg-rose-500/12 px-4 py-3 text-base text-rose-100">{settingsError}</p> : null}
 
@@ -312,6 +342,7 @@ export function RoomLobbyView({
                 {statCard('⏱️', 'Temporizador', formatTimer(room.settings.pvpTimerSeconds))}
                 {statCard('👥', 'Máx. jugadores', room.settings.maxPlayers ? String(room.settings.maxPlayers) : 'Sin límite')}
                 {statCard('🔠', 'Largo máx.', room.settings.maxWordLength ? String(room.settings.maxWordLength) : 'Cualquiera')}
+                {statCard('🗂️', 'Categoría', room.settings.category ?? 'Cualquiera')}
               </div>
             )}
           </RoomPanel>

@@ -8,5 +8,6 @@ export const roomSettingsPreview: RoomSettings = {
   submissionMode: 'manual_submit',
   maxPlayers: 4,
   maxWordLength: 6,
+  category: 'general',
   roundSummaryAutoAdvanceSeconds: 60,
 }

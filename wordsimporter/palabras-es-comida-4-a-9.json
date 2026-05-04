@@ -1,0 +1,1517 @@
+[
+  {
+    "word": "aceite",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "acelga",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "achiote",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "adobo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "aguacate",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "aguamiel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ajiaco",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ajillo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ajonjoli",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "albahaca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "albondiga",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "alcachofa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "alcaparra",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "alcayota",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "almeja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "almendra",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "almibar",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "anchoa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "anis",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "apio",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "arandano",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "arenque",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "arepa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "arroz",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "arveja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "atun",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "avellana",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "avena",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "azafran",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "azucar",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "babaco",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "bacalao",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "batata",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "batido",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "bechamel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "berenjena",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "berro",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "besugo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "bizcocho",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "boniato",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "boqueron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "borona",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "brioche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "brocoli",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "burrito",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "caballa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cacahuate",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cacahuete",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cacao",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cachapa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cafe",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "calabacin",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "calabaza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "calamar",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "caldo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "camaron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "canela",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "canelon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cangrejo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "caqui",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "caracol",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "caramelo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "carne",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "casabe",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "castana",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cazuela",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cebada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cebiche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cebolla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "centeno",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cerdo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cereal",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cereza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ceviche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chalota",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chalupa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "champinon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chicharo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chile",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chipiron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chirimoya",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chistorra",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "choclo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chorizo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chufa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "chupe",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "churro",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ciervo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cilantro",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ciruela",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "clavo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cocido",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "coco",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "colada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "coliflor",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "comino",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "compota",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "conejo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cordero",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "corvina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "costilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "crema",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "crepe",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "croqueta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "cuajada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "curcuma",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "durazno",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "edamame",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "elote",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "empanada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "empanado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "enchilada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "encurtido",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "endibia",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ensalada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "escabeche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "espinaca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "estofado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "fajita",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "falafel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "farina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "fideo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "frambuesa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "fresa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "frijol",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "fruta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "fugazza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "galleta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "gamba",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "garbanzo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "gazpacho",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "gelatina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "gnoqui",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "gofio",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "granada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "granola",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "grelos",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "grosella",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "guayaba",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "guisado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "harina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "helado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "higo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "hinojo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "horchata",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "huevo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "humita",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "hummus",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jalapeno",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jamon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jarabe",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jicama",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jitomate",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "jurel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "kebab",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "kiwi",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "langosta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lasana",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lechon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lechosa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lechuga",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lenteja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "limon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "lomito",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "longaniza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "macarron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "madalena",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "maicena",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mandarina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mango",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mani",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "manioca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "manjar",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "manteca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "manzana",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "maracuya",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "margarina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "marisco",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "matambre",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "medialuna",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "melaza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "melon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "membrillo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "menudo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "merengue",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "merienda",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "merluza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "miel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "milanesa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mojarra",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mole",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "morcilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mostaza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mote",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "mozarela",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "nabo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "nachos",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "naranja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "natilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "nopal",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "nuez",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "oregano",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "orejon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ostion",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "paella",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "panela",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "panqueque",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "papaya",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "parmesano",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pasta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pastel",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pastina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "patacon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "patata",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pepino",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pepita",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pera",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "perejil",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pernil",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pescado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "picadillo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "picante",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "picaron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pimienta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pimiento",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pitahaya",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pizza",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "platano",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "polenta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pollo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pomelo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ponche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "poroto",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "postre",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "potaje",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "provola",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "puchero",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pulpo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "pure",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "quesada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "quesillo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "queso",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "quiche",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "quinoa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "rabano",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "ravioli",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "relleno",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "remolacha",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "repollo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "revuelto",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "romero",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "rompope",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "rosquilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "salami",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "salchicha",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "salmon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "salsa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sancocho",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sandia",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sardina",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sazon",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "semola",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sesamo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "seta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sirope",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sobrasada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sofrito",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "soja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "solomillo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sopa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sorbete",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "sushi",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "taco",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tajada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tamal",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tamarindo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tapenade",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tapioca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tocino",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tomate",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "toronja",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "torrija",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "torta",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tortilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "tostada",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "toston",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "totopo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "trigo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "trucha",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "trufa",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "turron",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "vainilla",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "vainita",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "venado",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "verdura",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "vinagre",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "waffle",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "yautia",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "yogur",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "yuca",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "zanahoria",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "zapallo",
+    "category": "comida",
+    "hint": null
+  },
+  {
+    "word": "zarzamora",
+    "category": "comida",
+    "hint": null
+  }
+]

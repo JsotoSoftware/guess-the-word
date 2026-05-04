@@ -23,6 +23,10 @@ export class WordsService {
     }
   }
 
+  async getAvailableCategories(filters: SecretWordFilters, activityState: WordActivityState = 'active') {
+    return this.wordsRepository.getAvailableCategories(filters, activityState)
+  }
+
   async getRandomSecretWord(filters: SecretWordFilters) {
     const word = await this.wordsRepository.getRandomSecretWord(filters)
 

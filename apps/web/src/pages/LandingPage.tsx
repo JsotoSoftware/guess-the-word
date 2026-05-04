@@ -1,9 +1,11 @@
 import { DEFAULT_ROOM_SETTINGS, type GameMode, type GuessSubmissionMode, type RoomSettings } from '@guess-the-word/shared'
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { CategoryField } from '../components/ui/CategoryField'
 import { LandingActionButton } from '../features/landing/LandingActionButton'
 import { LandingPanel } from '../features/landing/LandingPanel'
 import { useRoomSession } from '../contexts/room-session'
+import { useAvailableWordCategories } from '../hooks/useAvailableWordCategories'
 
 interface CreateRoomFormState {
   nickname: string
@@ -14,6 +16,7 @@ interface CreateRoomFormState {
   submissionMode: GuessSubmissionMode
   maxPlayers: string
   maxWordLength: string
+  category: string
 }
 
 interface JoinRoomFormState {
@@ -21,8 +24,43 @@ interface JoinRoomFormState {
   nickname: string
 }
 
+const LAST_NICKNAME_STORAGE_KEY = 'guess-the-word.last-nickname'
+
+function readStoredNickname(): string {
+  if (typeof window === 'undefined') {
+    return ''
+  }
+
+  try {
+    return window.localStorage.getItem(LAST_NICKNAME_STORAGE_KEY)?.trim() ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function writeStoredNickname(nickname: string): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  try {
+    const normalizedNickname = nickname.trim()
+
+    if (!normalizedNickname) {
+      window.localStorage.removeItem(LAST_NICKNAME_STORAGE_KEY)
+      return
+    }
+
+    window.localStorage.setItem(LAST_NICKNAME_STORAGE_KEY, normalizedNickname)
+  } catch {
+    // noop
+  }
+}
+
+const storedNickname = readStoredNickname()
+
 const initialCreateRoomForm: CreateRoomFormState = {
-  nickname: '',
+  nickname: storedNickname,
   mode: DEFAULT_ROOM_SETTINGS.mode,
   totalRounds: String(DEFAULT_ROOM_SETTINGS.totalRounds),
   attemptsPerRound: String(DEFAULT_ROOM_SETTINGS.attemptsPerRound),
@@ -30,11 +68,12 @@ const initialCreateRoomForm: CreateRoomFormState = {
   submissionMode: DEFAULT_ROOM_SETTINGS.submissionMode,
   maxPlayers: String(DEFAULT_ROOM_SETTINGS.maxPlayers ?? ''),
   maxWordLength: String(DEFAULT_ROOM_SETTINGS.maxWordLength ?? ''),
+  category: DEFAULT_ROOM_SETTINGS.category ?? '',
 }
 
 const initialJoinRoomForm: JoinRoomFormState = {
   roomCode: '',
-  nickname: '',
+  nickname: storedNickname,
 }
 
 function parseOptionalPositiveInteger(value: string): number | null {
@@ -56,6 +95,7 @@ function buildRoomSettings(form: CreateRoomFormState): RoomSettings {
     submissionMode: form.submissionMode,
     maxPlayers: parseOptionalPositiveInteger(form.maxPlayers),
     maxWordLength: parseOptionalPositiveInteger(form.maxWordLength),
+    category: form.category.trim() || 'general',
     roundSummaryAutoAdvanceSeconds: DEFAULT_ROOM_SETTINGS.roundSummaryAutoAdvanceSeconds,
   }
 }
@@ -73,6 +113,7 @@ export function LandingPage() {
   const [joinRoomError, setJoinRoomError] = useState<string | null>(null)
   const [isCreatingRoom, setIsCreatingRoom] = useState(false)
   const [isJoiningRoom, setIsJoiningRoom] = useState(false)
+  const { availableCategories, isLoadingCategories, categoriesError } = useAvailableWordCategories(createRoomForm.maxWordLength)
 
   useEffect(() => {
     if (room) {
@@ -82,6 +123,18 @@ export function LandingPage() {
 
   const handleCreateRoomChange = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
+
+    if (name === 'nickname') {
+      setCreateRoomForm((currentForm) => ({
+        ...currentForm,
+        nickname: value,
+      }))
+      setJoinRoomForm((currentForm) => ({
+        ...currentForm,
+        nickname: value,
+      }))
+      return
+    }
 
     setCreateRoomForm((currentForm) => {
       const nextForm = {
@@ -104,9 +157,28 @@ export function LandingPage() {
   const handleJoinRoomChange = (event: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target
 
+    if (name === 'nickname') {
+      setJoinRoomForm((currentForm) => ({
+        ...currentForm,
+        nickname: value,
+      }))
+      setCreateRoomForm((currentForm) => ({
+        ...currentForm,
+        nickname: value,
+      }))
+      return
+    }
+
     setJoinRoomForm((currentForm) => ({
       ...currentForm,
       [name]: value,
+    }))
+  }
+
+  const handleSelectCategory = (category: string) => {
+    setCreateRoomForm((currentForm) => ({
+      ...currentForm,
+      category,
     }))
   }
 
@@ -121,6 +193,7 @@ export function LandingPage() {
         settings: buildRoomSettings(createRoomForm),
       })
 
+      writeStoredNickname(createRoomForm.nickname)
       navigate(`/room/${response.room.roomCode}`)
     } catch (error) {
       setCreateRoomError(error instanceof Error ? error.message : 'No se pudo crear la sala.')
@@ -140,6 +213,7 @@ export function LandingPage() {
         nickname: joinRoomForm.nickname,
       })
 
+      writeStoredNickname(joinRoomForm.nickname)
       navigate(`/room/${response.room.roomCode}`)
     } catch (error) {
       setJoinRoomError(error instanceof Error ? error.message : 'No se pudo unir a la sala.')
@@ -300,23 +374,39 @@ export function LandingPage() {
                     </label>
                   </div>
 
-                  <label className="block space-y-2">
-                    <span className="font-medium text-white">Longitud máxima de palabra</span>
-                    <select
-                      name="maxWordLength"
-                      value={createRoomForm.maxWordLength}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <label className="block space-y-2">
+                      <span className="font-medium text-white">Longitud máxima de palabra</span>
+                      <select
+                        name="maxWordLength"
+                        value={createRoomForm.maxWordLength}
+                        onChange={handleCreateRoomChange}
+                        className={inputClassName}
+                      >
+                        <option value="">Cualquiera</option>
+                        <option value="4">Hasta 4 letras</option>
+                        <option value="5">Hasta 5 letras</option>
+                        <option value="6">Hasta 6 letras</option>
+                        <option value="7">Hasta 7 letras</option>
+                        <option value="8">Hasta 8 letras</option>
+                        <option value="9">Hasta 9 letras</option>
+                        <option value="10">Hasta 10 letras</option>
+                        <option value="11">Hasta 11 letras</option>
+                        <option value="12">Hasta 12 letras</option>
+                      </select>
+                    </label>
+
+                    <CategoryField
+                      name="category"
+                      value={createRoomForm.category}
                       onChange={handleCreateRoomChange}
-                      className={inputClassName}
-                    >
-                      <option value="">Cualquiera</option>
-                      <option value="4">Hasta 4 letras</option>
-                      <option value="5">Hasta 5 letras</option>
-                      <option value="6">Hasta 6 letras</option>
-                      <option value="7">Hasta 7 letras</option>
-                      <option value="8">Hasta 8 letras</option>
-                      <option value="9">Hasta 9 letras</option>
-                    </select>
-                  </label>
+                      onSelectCategory={handleSelectCategory}
+                      availableCategories={availableCategories}
+                      isLoading={isLoadingCategories}
+                      error={categoriesError}
+                      inputClassName={inputClassName}
+                    />
+                  </div>
 
                   {createRoomForm.mode === 'pvp' ? (
                     <label className="block space-y-2">

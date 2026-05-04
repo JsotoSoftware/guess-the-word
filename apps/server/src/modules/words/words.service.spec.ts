@@ -7,7 +7,7 @@ import type { AvailableWordLength, SecretWordFilters, WordActivityState, WordRec
 
 type WordsRepositoryMock = Pick<
   WordsRepository,
-  'countActiveWords' | 'getAvailableLengths' | 'getRandomSecretWord' | 'listWords' | 'setWordActiveStateById'
+  'countActiveWords' | 'getAvailableLengths' | 'getAvailableCategories' | 'getRandomSecretWord' | 'listWords' | 'setWordActiveStateById'
 >
 
 function createWordRecord(overrides: Partial<WordRecord> = {}): WordRecord {
@@ -17,6 +17,7 @@ function createWordRecord(overrides: Partial<WordRecord> = {}): WordRecord {
     language: 'es',
     difficulty: 'facil',
     category: 'general',
+    hint: null,
     length: 5,
     is_active: true,
     created_at: '2026-01-01T00:00:00.000Z',
@@ -28,6 +29,7 @@ function createRepositoryMock(): WordsRepositoryMock {
   return {
     countActiveWords: async () => 0,
     getAvailableLengths: async () => [] as AvailableWordLength[],
+    getAvailableCategories: async () => [],
     getRandomSecretWord: async () => null,
     listWords: async () => [] as WordRecord[],
     setWordActiveStateById: async () => null,
@@ -46,6 +48,26 @@ test('getWordsSummary devuelve conteo, longitudes y sample del repositorio', asy
   assert.equal(response.activeWordCount, 3)
   assert.deepEqual(response.availableLengths, [{ length: 5, count: 3 }])
   assert.equal(response.sample?.word, 'queso')
+})
+
+test('getAvailableCategories reenvía filtros y estado de actividad al repositorio', async () => {
+  const repository = createRepositoryMock()
+  const calls: Array<{ filters: SecretWordFilters; activityState: WordActivityState }> = []
+
+  repository.getAvailableCategories = async (filters: SecretWordFilters, activityState: WordActivityState) => {
+    calls.push({ filters, activityState })
+    return []
+  }
+
+  const service = new WordsService(repository as unknown as WordsRepository)
+  await service.getAvailableCategories({ language: 'es', maxLength: 6 }, 'active')
+
+  assert.deepEqual(calls, [
+    {
+      filters: { language: 'es', maxLength: 6 },
+      activityState: 'active',
+    },
+  ])
 })
 
 test('getRandomSecretWord rechaza cuando no hay palabras activas disponibles', async () => {

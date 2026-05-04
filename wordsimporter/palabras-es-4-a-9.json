@@ -1,1414 +1,1767 @@
 [
   {
     "word": "casa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mesa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cama",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "foco",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pato",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "rana",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "lobo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "gato",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "nube",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "luna",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "isla",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "roca",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "hoja",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "flor",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sopa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vaso",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "taza",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mano",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "dedo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pelo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tren",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "miel",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "leon",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "moto",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "perro",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "amigo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "juego",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "lapiz",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "queso",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "leche",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "papel",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "coche",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "radio",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "botas",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "falda",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "playa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fruta",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "dulce",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "hielo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "barco",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "globo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "helado",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "banana",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tomate",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cocina",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "jardin",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "parque",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pueblo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "camara",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "musica",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "regalo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fiesta",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "abrazo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "payaso",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pelota",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "escuela",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ventana",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "familia",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mochila",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "galleta",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "naranja",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cebolla",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sonrisa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "gigante",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "semilla",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "espejo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "elefante",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mariposa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "guitarra",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cuaderno",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "castillo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "estrella",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "reloj",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "oveja",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bosque",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "puente",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "corona",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fuente",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "planeta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tortuga",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ardilla",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "colegio",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "oficina",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "domingo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "febrero",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "agosto",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "verano",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "volcan",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "oceano",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cometa",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pirata",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tesoro",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "conejo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "jirafa",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "caballo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "durazno",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pepino",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "lechuga",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "canasta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tablero",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pecera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fogata",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "molino",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "anillo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "collar",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "domino",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ajedrez",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "teclado",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "monitor",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "libreta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "noticia",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pintura",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sendero",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "invierno",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tormenta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "arcoiris",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "piramide",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "desierto",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "galaxia",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "satelite",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "avioneta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bufanda",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zapatos",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "granero",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cascada",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "palmera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pollito",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "avellana",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ciruela",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "frambuesa",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zanahoria",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "espinaca",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "almendra",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "chimenea",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vecindad",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "carreta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pulsera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "brilloso",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "silencio",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "susurro",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "campana",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "triangulo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cuadrado",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "circulo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "relampago",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "abismo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "aurora",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cabina",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "flauta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "jazmin",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "trebol",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "eclipse",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "culebra",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "glaciar",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "iceberg",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "insecto",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "melodia",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "muralla",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "oraculo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pantera",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "plumaje",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "refugio",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "retablo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "silueta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vitrina",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zepelin",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "altavoz",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "anemona",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "brujula",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "candado",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "columna",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "disfraz",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fabrica",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fragata",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "girasol",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pelicano",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tempestad",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "universo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ventisca",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "xilofono",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "acertijo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "acuarela",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alfombra",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alquimia",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "antorcha",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "armadura",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "balancin",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bastidor",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "calabaza",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "caracola",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "catalejo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "catedral",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "centella",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "diamante",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "escalera",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "espectro",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "fantasma",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "frontera",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "guardian",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "herreria",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "imprenta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "incendio",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "linterna",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mazmorra",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "misterio",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "nebulosa",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "orquesta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "paraguas",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pedestal",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "persiana",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "remolino",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sombrero",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "travesia",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "trompeta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vendaval",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "asteroide",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "berenjena",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cerbatana",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "crisalida",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "escarlata",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "esmeralda",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "hipotesis",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "laberinto",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "lagartija",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "manantial",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "meteorito",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "nectarina",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pentagono",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pergamino",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "porcelana",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "serpiente",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "trinchera",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "brillante",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "arbol",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "silla",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "llave",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "carta",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "suelo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "techo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "nariz",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "oreja",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "brazo",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pierna",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "diente",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "frente",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "camisa",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "puerta",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "piedra",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "calor",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "frio",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "salto",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "nadar",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zapato",
-    "difficulty": "facil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "abeja",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "aguila",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "aldea",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alfiler",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "camino",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "caracol",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "camello",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cereza",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "acuario",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bateria",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bicicleta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cabecera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "callejon",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "carpeta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cortina",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "martillo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "maleta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "maletin",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sandalia",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sombrilla",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tractor",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "montana",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "medalla",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "palacio",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "botella",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "gimnasio",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "hormiga",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "laguna",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tiburon",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "delfin",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "castor",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bruja",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cohete",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sirena",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "dragon",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "duende",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cartero",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ventanal",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pasillo",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "esquina",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "colchon",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cerebro",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cosecha",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "granito",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mineral",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "juguete",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "maquina",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "palanca",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "peluche",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "refresco",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sandia",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tijeras",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vecino",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zanja",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "avion",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "camion",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "carrito",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cinturon",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alfajor",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "palomita",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pizarra",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "postre",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "receta",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "sarten",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tetera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bodega",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "safari",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "selva",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cueva",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "pradera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ribera",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "caverna",
-    "difficulty": "media"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "acueducto",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alambique",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "algoritmo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "alpinista",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "anaconda",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "bumeran",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "catapulta",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ciclope",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "corsario",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "cromatico",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "ecuacion",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "enjambre",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "epopeya",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "filamento",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "jabalina",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "mandarina",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "monolito",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "obelisco",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "origami",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "parabola",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "paradoja",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "quimera",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tragaluz",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "tridente",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "utensilio",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "valquiria",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "vocabulo",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   },
   {
     "word": "zigurat",
-    "difficulty": "dificil"
+    "category": "general",
+    "hint": null
   }
 ]

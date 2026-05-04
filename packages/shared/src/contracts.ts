@@ -22,6 +22,7 @@ export interface RoomSettings {
   submissionMode: GuessSubmissionMode
   maxPlayers: number | null
   maxWordLength: number | null
+  category: string | null
   roundSummaryAutoAdvanceSeconds: number
 }
 

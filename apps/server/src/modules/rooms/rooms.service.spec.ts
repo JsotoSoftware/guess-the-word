@@ -14,7 +14,7 @@ import {
 
 function createServiceWithWords(words: string[]) {
   return new RoomsService({
-    async getRandomSecretWord(filters?: { length?: number; maxLength?: number; excludeWords?: string[] }) {
+    async getRandomSecretWord(filters?: { length?: number; maxLength?: number; category?: string; excludeWords?: string[] }) {
       const excludedWords = new Set(filters?.excludeWords ?? [])
       const selectedWord = words.find((word) => {
         if (excludedWords.has(word)) {
@@ -41,7 +41,8 @@ function createServiceWithWords(words: string[]) {
         word: selectedWord,
         language: 'spanish',
         difficulty: null,
-        category: null,
+        category: filters?.category ?? null,
+        hint: null,
         length: selectedWord.length,
         is_active: true,
         created_at: '2026-01-01T00:00:00.000Z',
@@ -108,6 +109,89 @@ test('conserva la longitud máxima de palabra elegida al crear una sala', () => 
   })
 
   assert.equal(response.room.settings.maxWordLength, 6)
+})
+
+test('permite configurar una longitud máxima de palabra de hasta 12', () => {
+  const service = new RoomsService()
+  const response = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      maxWordLength: 12,
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.settings.maxWordLength, 12)
+})
+
+test('conserva la categoría elegida al crear una sala', () => {
+  const service = new RoomsService()
+  const response = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      category: ' Anime ',
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.settings.category, 'anime')
+})
+
+test('usa general como categoría por defecto cuando llega vacía', () => {
+  const service = new RoomsService()
+  const response = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      category: '   ',
+    },
+    socketId: 'socket-host',
+  })
+
+  assert.equal(response.room.settings.category, 'general')
+})
+
+test('si no hay palabras para la categoría, iniciar partida falla sin sacar la sala del lobby', async () => {
+  const service = new RoomsService({
+    async getRandomSecretWord() {
+      throw new NotFoundException('No se encontró una palabra activa para la categoría anime.')
+    },
+  } as never)
+
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      category: 'anime',
+    },
+    socketId: 'socket-host',
+  })
+
+  await assert.rejects(
+    () => service.startMatch({ roomCode: createdRoom.room.roomCode, socketId: 'socket-host' }),
+    /categoría anime/,
+  )
+
+  const snapshotAfterFailure = service.getRoomStateTargets(createdRoom.room.roomCode)[0]?.room
+
+  assert.ok(snapshotAfterFailure)
+  assert.equal(snapshotAfterFailure?.viewState, 'lobby')
+  assert.equal(snapshotAfterFailure?.status, 'lobby')
+  assert.equal(snapshotAfterFailure?.currentRoundNumber, 0)
+
+  const updatedRoom = service.updateRoomSettings({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      category: 'videojuegos',
+    },
+  })
+
+  assert.equal(updatedRoom.room.viewState, 'lobby')
+  assert.equal(updatedRoom.room.settings.category, 'videojuegos')
 })
 
 test('permite que otro cliente se una a una sala válida', () => {
@@ -893,6 +977,55 @@ test('la sala respeta la longitud máxima configurada al elegir palabras', async
 
   assert.equal(response.room.viewState, 'round_active')
   assert.equal(response.room.round.wordLength, 6)
+})
+
+test('la sala envía la categoría configurada al seleccionar palabras', async () => {
+  const receivedFilters: Array<{ maxLength?: number; category?: string }> = []
+  const service = new RoomsService({
+    async getRandomSecretWord(filters?: { maxLength?: number; category?: string; excludeWords?: string[] }) {
+      receivedFilters.push({
+        maxLength: filters?.maxLength,
+        category: filters?.category,
+      })
+
+      return {
+        id: 'word-dragon',
+        word: 'dragon',
+        language: 'es',
+        difficulty: null,
+        category: filters?.category ?? null,
+        hint: null,
+        length: 6,
+        is_active: true,
+        created_at: '2026-01-01T00:00:00.000Z',
+      }
+    },
+  } as never)
+
+  const createdRoom = service.createRoom({
+    nickname: 'Ana',
+    settings: {
+      ...DEFAULT_ROOM_SETTINGS,
+      mode: 'pvp',
+      category: 'anime',
+      maxWordLength: 6,
+      pvpTimerSeconds: null,
+    },
+    socketId: 'socket-host',
+  })
+
+  service.joinRoom({
+    roomCode: createdRoom.room.roomCode,
+    nickname: 'Luis',
+    socketId: 'socket-guest',
+  })
+
+  await service.startMatch({
+    roomCode: createdRoom.room.roomCode,
+    socketId: 'socket-host',
+  })
+
+  assert.deepEqual(receivedFilters, [{ maxLength: 6, category: 'anime' }])
 })
 
 test('al iniciar una ronda PVP se elige una palabra y todos entran a la misma ronda activa', async () => {
